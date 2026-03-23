@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ml-taint-toleration
+spec:
+  template:
+    spec:
+      # This 'tolerates' the taint we put on the node
+      tolerations:
+      - key: "dedicated"
+        operator: "Equal"
+        value: "ml"
+        effect: "NoSchedule"
+      containers:
+      - name: ml-worker
+        image: ml-workload:v1
+        imagePullPolicy: Never
+        command: ["python"]
+        args: ["src/train_rf.py"]
+      restartPolicy: Never
