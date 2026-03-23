@@ -4,7 +4,7 @@ TAG=latest
 CPUS=4
 MEM=6144
 
-.PHONY: setup build load run lint clean
+.PHONY: setup build load run lint lint-fix clean
 
 # 1. Setup the environment (Day 1 task)
 setup:
@@ -13,8 +13,12 @@ setup:
 
 # 2. Linting (Ensures code quality)
 lint:
-	pip install flake8
-	flake8 src/*.py
+	/Users/kshitijmishra/.pyenv/versions/3.11.5/bin/python -m pip install flake8
+	/Users/kshitijmishra/.pyenv/versions/3.11.5/bin/python -m flake8 src/*.py
+
+lint-fix:
+	/Users/kshitijmishra/.pyenv/versions/3.11.5/bin/python -m pip install black
+	/Users/kshitijmishra/.pyenv/versions/3.11.5/bin/python -m black src/*.py
 
 # 3. Build the Docker image
 build:
