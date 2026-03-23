@@ -1,0 +1,25 @@
+# Part A: Define the Priority
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: high-priority-ml
+value: 1000000
+globalDefault: false
+description: "This priority should be used for critical ML training jobs."
+---
+# Part B: The Job
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ml-priority-task
+spec:
+  template:
+    spec:
+      priorityClassName: high-priority-ml
+      containers:
+      - name: ml-worker
+        image: ml-workload:v1
+        imagePullPolicy: Never
+        command: ["python"]
+        args: ["src/train_rf.py"]
+      restartPolicy: Never
