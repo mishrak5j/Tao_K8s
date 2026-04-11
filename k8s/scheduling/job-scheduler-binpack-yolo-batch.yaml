@@ -1,0 +1,28 @@
+# Bin packing + YOLO — Minikube-oriented (local image after `make build` + `make load`).
+# Parallel batch Job: 4 successful completions, max 2 pods at a time (tests bin-pack placement).
+# Requires: `make install-secondary-scheduler` and scheduler pods Running in kube-system.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ml-sched-binpack-yolo
+  namespace: ml-scheduling
+spec:
+  completions: 4
+  parallelism: 2
+  template:
+    spec:
+      schedulerName: binpack-scheduler
+      containers:
+        - name: ml-worker
+          image: ml-workload:v1
+          imagePullPolicy: Never
+          args: ["--task", "yolo"]
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1024Mi"
+      restartPolicy: Never
+  backoffLimit: 0
