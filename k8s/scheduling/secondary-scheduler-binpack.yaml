@@ -1,0 +1,57 @@
+# Bin-pack profile only (MostAllocated). Pairs with job-scheduler-binpack.yaml (schedulerName: binpack-scheduler).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: second-scheduler-binpack-config
+  namespace: kube-system
+data:
+  config.yaml: |
+    apiVersion: kubescheduler.config.k8s.io/v1
+    kind: KubeSchedulerConfiguration
+    profiles:
+      - schedulerName: binpack-scheduler
+        pluginConfig:
+          - name: NodeResourcesFit
+            args:
+              scoringStrategy:
+                type: MostAllocated
+                resources:
+                  - name: cpu
+                    weight: 1
+                  - name: memory
+                    weight: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: second-scheduler-binpack
+  namespace: kube-system
+  labels:
+    app: second-scheduler-binpack
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: second-scheduler-binpack
+  template:
+    metadata:
+      labels:
+        app: second-scheduler-binpack
+    spec:
+      serviceAccountName: second-scheduler
+      containers:
+        - name: kube-scheduler
+          image: registry.k8s.io/kube-scheduler:v1.29.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - --config=/etc/kubernetes/scheduler-config.yaml
+            - --leader-elect=false
+          volumeMounts:
+            - name: config
+              mountPath: /etc/kubernetes/scheduler-config.yaml
+              subPath: config.yaml
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: second-scheduler-binpack-config
