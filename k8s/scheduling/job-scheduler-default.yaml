@@ -1,0 +1,25 @@
+# Strategy: Default — cluster default kube-scheduler (no spec.schedulerName).
+# Image: replace REGION / PROJECT / REPO with your Artifact Registry path (GKE).
+# Minikube: use image ml-workload:v1 and imagePullPolicy: Never after `make load`.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ml-sched-default-resnet
+  namespace: ml-scheduling
+spec:
+  template:
+    spec:
+      containers:
+        - name: ml-worker
+          image: us-central1-docker.pkg.dev/YOUR_PROJECT/YOUR_REPO/ml-workload:v1
+          imagePullPolicy: IfNotPresent
+          args: ["--task", "resnet"]
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1024Mi"
+      restartPolicy: Never
+  backoffLimit: 0
