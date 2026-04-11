@@ -1,4 +1,6 @@
 .venv/
+gcp.env
+k8s/overlays/gke/kustomization.yaml
 __pycache__/
 *.pyc
 .Python
