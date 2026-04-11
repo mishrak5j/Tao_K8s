@@ -7,6 +7,8 @@ IMAGE_GPU=ml-workload-gpu
 TAG_GPU=v1
 CPUS=4
 MEM=6144
+# Minikube multi-node (scheduling / bin-pack / spread need 2+ nodes to be meaningful)
+MINIKUBE_NODES ?= 2
 
 # GKE / Artifact Registry (override via gcp.env or environment)
 GCP_PROJECT ?= $(shell gcloud config get-value project 2>/dev/null)
@@ -42,9 +44,9 @@ gcp-apply-workloads: gcp-kustomize
 gcp-phase2: gcp-push gcp-get-credentials gcp-apply-workloads
 	@echo "Next: kubectl get pods -n ml-scheduling; kubectl logs -n ml-scheduling job/ml-sched-default-resnet"
 
-# 1. Start Minikube with metrics-server (use multiple nodes if you want placement variety)
+# 1. Start Minikube with metrics-server (--nodes for multi-node; override: make setup MINIKUBE_NODES=3)
 setup:
-	minikube start --driver=docker --cpus=$(CPUS) --memory=$(MEM)
+	minikube start --driver=docker --cpus=$(CPUS) --memory=$(MEM) --nodes=$(MINIKUBE_NODES)
 	minikube addons enable metrics-server
 
 # 2. Linting
