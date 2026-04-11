@@ -8,6 +8,10 @@ data:
   config.yaml: |
     apiVersion: kubescheduler.config.k8s.io/v1
     kind: KubeSchedulerConfiguration
+    # Required: config defaults leaderElect=true; without this, secondary schedulers
+    # compete with the default kube-scheduler for the same lease and crash.
+    leaderElection:
+      leaderElect: false
     profiles:
       - schedulerName: binpack-scheduler
         pluginConfig:
@@ -41,8 +45,12 @@ spec:
       serviceAccountName: second-scheduler
       containers:
         - name: kube-scheduler
-          image: registry.k8s.io/kube-scheduler:v1.29.0
+          # Must match cluster control plane minor version (see k8s/scheduling/README.md).
+          image: registry.k8s.io/kube-scheduler:v1.35.0
           imagePullPolicy: IfNotPresent
+          # Image ENTRYPOINT is /go-runner; args alone are passed to go-runner (not kube-scheduler).
+          command:
+            - /usr/local/bin/kube-scheduler
           args:
             - --config=/etc/kubernetes/scheduler-config.yaml
             - --leader-elect=false
