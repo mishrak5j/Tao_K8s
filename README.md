@@ -1,30 +1,64 @@
-# Kubernetes Resource Management for ML Workloads
+# Kubernetes resource management for ML workloads
 
-**Course:** CSC4311 - Cloud Computing (Spring 2026)  
+**Course:** CSC4311 — Cloud Computing (Spring 2026)  
 **Author:** Kshitij Mishra
 
-## 1. Project Motivation
+## Workloads
 
-This project evaluates how different Kubernetes scheduling strategies impact the performance of 5 distinct Machine Learning tasks. We analyze the trade-offs between resource utilization and model training throughput.
-
-## 2. System Architecture
-
-The system consists of:
-
-- **Local Cluster:** Minikube (running on Docker driver).
-- **Workloads:** 5 containerized Python ML tasks (Random Forest, CNN, etc.).
-- **Schedulers:** Default K8s Scheduler, Resource Quotas, Priority Classes, and Node Affinity.
-
-## 3. Prerequisites
-
-- Compatible ARM64/x86 system
-- Docker Desktop
-- Minikube & Kubectl (`brew install minikube kubectl`)
-
-## 4. How to Build and Run
-
-### Step 1: Start the Cluster
+Four **PyTorch** benchmarks run via a single entrypoint:
 
 ```bash
-minikube start --driver=docker --cpus=4 --memory=6144
+python src/run_task.py --task {resnet,bert,yolo,dlrm}
 ```
+
+| Task | Script module | Role |
+|------|-----------------|------|
+| `resnet` | `bench_resnet.py` | ResNet-50 training steps |
+| `bert` | `bench_bert.py` | BERT-Base–sized transformer (random init) |
+| `yolo` | `bench_yolo.py` | YOLOv8n inference latency |
+| `dlrm` | `bench_dlrm.py` | Mini DLRM-style embeddings + MLP |
+
+Logs use `task_common.print_result` (`TASK_NAME=`, `TOTAL_DURATION_SECONDS=`).
+
+## Images
+
+- **`Dockerfile`** — CPU PyTorch (`make build` → `ml-workload:v1`)
+- **`Dockerfile.gpu`** — CUDA base for GKE/Linux GPU (`make build-gpu`)
+
+Dependencies: `requirements.txt` (torch installed in Dockerfile; transformers, ultralytics, numpy).
+
+## Scheduling (only four methods)
+
+The repo is scoped to **default**, **bin packing**, **spread**, and **gang** scheduling. All Job manifests live under **`k8s/scheduling/`**. See [`k8s/scheduling/README.md`](k8s/scheduling/README.md) for apply order and manifests.
+
+```bash
+make install-secondary-scheduler   # bin-pack + spread (secondary kube-schedulers)
+make install-volcano               # gang (Volcano)
+```
+
+## Cluster workflow
+
+**GKE:** Push `ml-workload` to Artifact Registry, replace the placeholder image in `k8s/scheduling/*.yaml` with your `REGION-docker.pkg.dev/...` URL (`imagePullPolicy: IfNotPresent` is already set). Configure pull auth if the repo is private.
+
+**Minikube:** After `make load`, set Jobs back to `image: ml-workload:v1` and `imagePullPolicy: Never` (see comments in those YAML files), or maintain a local overlay.
+
+```bash
+make setup
+make build
+make load
+kubectl apply -f k8s/00-namespace-quota.yaml
+make run    # default scheduler + ResNet Job
+kubectl logs -n ml-scheduling job/ml-sched-default-resnet
+```
+
+Local Docker smoke (no cluster):
+
+```bash
+make build
+make run-bench-resnet
+```
+
+## References
+
+- [Kubernetes scheduler configuration](https://kubernetes.io/docs/reference/scheduling/config/)
+- [Volcano](https://volcano.sh/)
