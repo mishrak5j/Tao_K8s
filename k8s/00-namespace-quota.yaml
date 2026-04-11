@@ -1,0 +1,33 @@
+# Apply first: namespace + cluster-level caps for ML scheduling experiments
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ml-scheduling
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: ml-compute-quota
+  namespace: ml-scheduling
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: 5Gi
+    limits.cpu: "6"
+    limits.memory: 6Gi
+    pods: "20"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: ml-limit-range
+  namespace: ml-scheduling
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu: 100m
+        memory: 128Mi
+      default:
+        cpu: 500m
+        memory: 512Mi
