@@ -17,3 +17,44 @@ subjects:
   - kind: ServiceAccount
     name: second-scheduler
     namespace: kube-system
+---
+# kube-scheduler v1.3x informers list/watch StorageClass (and related) cluster-wide. If the
+# system:kube-scheduler binding is not effective in your cluster, these explicit rules unblock
+# "storageclasses ... is forbidden" and let scheduling caches sync.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: second-scheduler-informer
+rules:
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses", "csinodes", "csidrivers", "csistoragecapacities"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: second-scheduler-informer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: second-scheduler-informer
+subjects:
+  - kind: ServiceAccount
+    name: second-scheduler
+    namespace: kube-system
+---
+# Lets the scheduler read kube-system/extension-apiserver-authentication (fixes informer errors).
+# Requires the built-in Role extension-apiserver-authentication-reader (standard on kubeadm/minikube).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: second-scheduler-extension-auth-reader
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+  - kind: ServiceAccount
+    name: second-scheduler
+    namespace: kube-system
