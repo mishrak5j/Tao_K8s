@@ -4,11 +4,11 @@ kind: Kustomization
 namespace: ml-scheduling
 resources:
   - ../../00-namespace-quota.yaml
-  - ../../scheduling/job-scheduler-default.yaml
-  - ../../scheduling/job-scheduler-binpack.yaml
-  - ../../scheduling/job-scheduler-spread.yaml
-  - ../../scheduling/job-volcano-gang.yaml
+  - ../../scheduling/job-scheduler-binpack-yolo-batch.yaml
+  - ../../scheduling/job-spread-yolo-batch.yaml
+patches:
+  - path: patch-gke-image-pull.yaml
 images:
-  - name: us-central1-docker.pkg.dev/YOUR_PROJECT/YOUR_REPO/ml-workload
+  - name: ml-workload
     newName: @AR_IMAGE@
     newTag: @TAG@
