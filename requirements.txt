@@ -1,3 +1,4 @@
-scikit-learn
-numpy
-pandas
+# PyTorch installed separately in Dockerfile (CPU or CUDA base image).
+numpy>=1.24.0
+transformers>=4.35.0,<5
+ultralytics>=8.0.0
