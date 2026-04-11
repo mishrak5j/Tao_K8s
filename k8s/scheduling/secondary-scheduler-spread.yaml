@@ -1,0 +1,57 @@
+# Spread profile only (LeastAllocated). Pairs with job-scheduler-spread.yaml (schedulerName: spread-scheduler).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: second-scheduler-spread-config
+  namespace: kube-system
+data:
+  config.yaml: |
+    apiVersion: kubescheduler.config.k8s.io/v1
+    kind: KubeSchedulerConfiguration
+    profiles:
+      - schedulerName: spread-scheduler
+        pluginConfig:
+          - name: NodeResourcesFit
+            args:
+              scoringStrategy:
+                type: LeastAllocated
+                resources:
+                  - name: cpu
+                    weight: 1
+                  - name: memory
+                    weight: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: second-scheduler-spread
+  namespace: kube-system
+  labels:
+    app: second-scheduler-spread
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: second-scheduler-spread
+  template:
+    metadata:
+      labels:
+        app: second-scheduler-spread
+    spec:
+      serviceAccountName: second-scheduler
+      containers:
+        - name: kube-scheduler
+          image: registry.k8s.io/kube-scheduler:v1.29.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - --config=/etc/kubernetes/scheduler-config.yaml
+            - --leader-elect=false
+          volumeMounts:
+            - name: config
+              mountPath: /etc/kubernetes/scheduler-config.yaml
+              subPath: config.yaml
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: second-scheduler-spread-config
