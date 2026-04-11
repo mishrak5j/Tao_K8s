@@ -15,11 +15,13 @@ Job manifests use a **GCP Artifact Registry** placeholder:
 
 `us-central1-docker.pkg.dev/YOUR_PROJECT/YOUR_REPO/ml-workload:v1` with **`imagePullPolicy: IfNotPresent`**.
 
-Before applying on GKE:
+**Recommended on GKE:** from the repo root, set `GCP_PROJECT`, `GCP_REGION`, `AR_REPO` (see `gcp.env.example`), then `make gcp-push` and `make gcp-apply-workloads` — the overlay `k8s/overlays/gke` rewrites all Job images via Kustomize (see root `README.md`, Phase 2).
+
+Alternatively:
 
 1. Build and push: `docker tag …` / `docker push` to your repo (often `REGION-docker.pkg.dev/PROJECT/REPO/ml-workload:v1`).
 2. Replace `YOUR_PROJECT` / `YOUR_REPO` (and `us-central1` if your region differs) in every Job YAML, **or** use `sed`/Kustomize.
-3. Ensure nodes can pull (Workload Identity, `imagePullSecrets`, or public repo).
+3. Ensure nodes can pull (same GCP project as Artifact Registry is usually enough; private repos may need `imagePullSecrets`).
 
 **Minikube** (image only on the node after `make load`): set `image: ml-workload:v1` and `imagePullPolicy: Never` in these Job files, then apply.
 
