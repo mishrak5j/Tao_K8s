@@ -1,0 +1,24 @@
+# GKE: use registry pull (not Minikube Never). Applied by kustomization.yaml.in.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ml-sched-binpack-yolo
+  namespace: ml-scheduling
+spec:
+  template:
+    spec:
+      containers:
+        - name: ml-worker
+          imagePullPolicy: IfNotPresent
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ml-sched-spread-yolo
+  namespace: ml-scheduling
+spec:
+  template:
+    spec:
+      containers:
+        - name: ml-worker
+          imagePullPolicy: IfNotPresent
