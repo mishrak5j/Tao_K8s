@@ -1,3 +1,5 @@
+-include gcp.env
+
 # Variables (match k8s manifests)
 IMAGE_NAME=ml-workload
 TAG=v1
@@ -6,8 +8,39 @@ TAG_GPU=v1
 CPUS=4
 MEM=6144
 
-.PHONY: setup build load run lint lint-fix clean clean-jobs build-gpu run-gpu-resnet run-bench-resnet \
-	install-secondary-scheduler uninstall-secondary-scheduler install-volcano
+# GKE / Artifact Registry (override via gcp.env or environment)
+GCP_PROJECT ?= $(shell gcloud config get-value project 2>/dev/null)
+GCP_REGION ?= us-central1
+AR_REPO ?= ml-repo
+GCP_CLUSTER ?= tao-cluster
+AR_IMAGE ?= $(GCP_REGION)-docker.pkg.dev/$(GCP_PROJECT)/$(AR_REPO)/$(IMAGE_NAME)
+
+.PHONY: setup build load run lint lint-fix clean clean-jobs build-gpu run-gpu-resnet run-bench-resnet smoke \
+	install-secondary-scheduler uninstall-secondary-scheduler install-volcano \
+	gcp-kustomize gcp-push gcp-get-credentials gcp-apply-workloads gcp-phase2
+
+# --- GKE Phase 2: push image + kubectl apply (after cluster and AR repo exist) ---
+gcp-kustomize:
+	@test -n "$(GCP_PROJECT)" || (echo "Set GCP_PROJECT or run: gcloud config set project YOUR_PROJECT"; exit 1)
+	sed -e 's|@AR_IMAGE@|$(AR_IMAGE)|g' -e 's|@TAG@|$(TAG)|g' \
+		k8s/overlays/gke/kustomization.yaml.in > k8s/overlays/gke/kustomization.yaml
+
+gcp-push: build
+	@test -n "$(GCP_PROJECT)" || (echo "Set GCP_PROJECT or run: gcloud config set project YOUR_PROJECT"; exit 1)
+	docker tag $(IMAGE_NAME):$(TAG) $(AR_IMAGE):$(TAG)
+	docker push $(AR_IMAGE):$(TAG)
+	@echo "Pushed $(AR_IMAGE):$(TAG)"
+
+# Regional GKE cluster (use --region; zonal clusters use --zone instead)
+gcp-get-credentials:
+	gcloud container clusters get-credentials $(GCP_CLUSTER) --region=$(GCP_REGION)
+
+gcp-apply-workloads: gcp-kustomize
+	kubectl kustomize --load-restrictor=LoadRestrictionsNone k8s/overlays/gke | kubectl apply -f -
+
+# Full Phase 2: build, push to Artifact Registry, kubeconfig for GKE, apply namespace + Jobs
+gcp-phase2: gcp-push gcp-get-credentials gcp-apply-workloads
+	@echo "Next: kubectl get pods -n ml-scheduling; kubectl logs -n ml-scheduling job/ml-sched-default-resnet"
 
 # 1. Start Minikube with metrics-server (use multiple nodes if you want placement variety)
 setup:
@@ -35,6 +68,13 @@ run-gpu-resnet:
 
 run-bench-resnet:
 	docker run --rm $(IMAGE_NAME):$(TAG) --task resnet
+
+# Run all four CPU benchmarks in sequence (rebuilds image first; needs Docker)
+smoke: build
+	docker run --rm $(IMAGE_NAME):$(TAG) --task resnet
+	docker run --rm $(IMAGE_NAME):$(TAG) --task bert
+	docker run --rm $(IMAGE_NAME):$(TAG) --task yolo
+	docker run --rm $(IMAGE_NAME):$(TAG) --task dlrm
 
 # 4. Load image into Minikube (then set Job YAML to image: $(IMAGE_NAME):$(TAG) and imagePullPolicy: Never)
 load:
