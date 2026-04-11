@@ -51,12 +51,14 @@ Or run steps separately: `make gcp-push`, then `make gcp-get-credentials`, then 
 
 ## Cluster workflow (Minikube)
 
+`make setup` starts Minikube with **`MINIKUBE_NODES`** (default **2**) so bin-pack vs spread vs default placement differs across nodes. Use `MINIKUBE_NODES=1 make setup` for a single-node profile, or `MINIKUBE_NODES=4` for more room.
+
 **Minikube:** After `make load`, set Jobs back to `image: ml-workload:v1` and `imagePullPolicy: Never` (see comments in those YAML files), or maintain a local overlay.
 
 **GKE (manual image line):** You can still edit `k8s/scheduling/*.yaml` by hand, or use only the overlay above so you never commit project-specific URLs.
 
 ```bash
-make setup
+make setup                    # default: 2 nodes (MINIKUBE_NODES=2); e.g. MINIKUBE_NODES=3 make setup
 make build
 make load
 kubectl apply -f k8s/00-namespace-quota.yaml
