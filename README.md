@@ -36,11 +36,24 @@ make install-secondary-scheduler   # bin-pack + spread (secondary kube-scheduler
 make install-volcano               # gang (Volcano)
 ```
 
-## Cluster workflow
+## Phase 2 — GKE + Artifact Registry
 
-**GKE:** Push `ml-workload` to Artifact Registry, replace the placeholder image in `k8s/scheduling/*.yaml` with your `REGION-docker.pkg.dev/...` URL (`imagePullPolicy: IfNotPresent` is already set). Configure pull auth if the repo is private.
+With APIs enabled, a Docker Artifact Registry repo, and a running cluster:
+
+1. **Optional:** `cp gcp.env.example gcp.env` and edit if your project or cluster name differs. The Makefile loads `gcp.env` automatically.
+2. **One-shot:** from the repo root, `make gcp-phase2` — builds the image, tags and pushes to `$(GCP_REGION)-docker.pkg.dev/$(GCP_PROJECT)/$(AR_REPO)/ml-workload:$(TAG)`, runs `gcloud container clusters get-credentials` for `$(GCP_CLUSTER)`, and applies the namespace plus all Job manifests with the correct image (via `k8s/overlays/gke`).
+
+Or run steps separately: `make gcp-push`, then `make gcp-get-credentials`, then `make gcp-apply-workloads`.
+
+**After apply:** install secondary schedulers or Volcano as needed (`make install-secondary-scheduler`, `make install-volcano`), then re-apply or create Jobs per [`k8s/scheduling/README.md`](k8s/scheduling/README.md). The default kube-scheduler Job is `ml-sched-default-resnet`.
+
+**Note:** A single **e2-medium** node is tight for PyTorch; for heavier runs use a larger machine type or more nodes. The Volcano gang Job requests two replicas (`minAvailable: 2`); ensure the cluster can place both pods.
+
+## Cluster workflow (Minikube)
 
 **Minikube:** After `make load`, set Jobs back to `image: ml-workload:v1` and `imagePullPolicy: Never` (see comments in those YAML files), or maintain a local overlay.
+
+**GKE (manual image line):** You can still edit `k8s/scheduling/*.yaml` by hand, or use only the overlay above so you never commit project-specific URLs.
 
 ```bash
 make setup
