@@ -1,0 +1,31 @@
+# Strategy: Gang scheduling — Volcano Job so tasks start together (requires: make install-volcano).
+# minAvailable == replicas => all-or-nothing for this task group.
+# Image: replace REGION / PROJECT / REPO with your Artifact Registry path (GKE).
+# Minikube: use image ml-workload:v1 and imagePullPolicy: Never after `make load`.
+apiVersion: batch.volcano.sh/v1alpha1
+kind: Job
+metadata:
+  name: ml-gang-resnet
+  namespace: ml-scheduling
+spec:
+  minAvailable: 2
+  schedulerName: volcano
+  queue: default
+  tasks:
+    - replicas: 2
+      name: worker
+      template:
+        spec:
+          containers:
+            - name: ml-worker
+              image: us-central1-docker.pkg.dev/YOUR_PROJECT/YOUR_REPO/ml-workload:v1
+              imagePullPolicy: IfNotPresent
+              args: ["--task", "resnet"]
+              resources:
+                requests:
+                  cpu: "500m"
+                  memory: "512Mi"
+                limits:
+                  cpu: "1000m"
+                  memory: "1024Mi"
+          restartPolicy: Never
