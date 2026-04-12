@@ -1,0 +1,2 @@
+# Host-side deps for run_experiment.py (not used inside the ml-workload image).
+matplotlib>=3.8.0
