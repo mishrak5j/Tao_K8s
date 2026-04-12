@@ -32,39 +32,39 @@ TEMPLATE_PATH = REPO_ROOT / "k8s/scheduling/experiment-template.yaml"
 SCHEDULING_DIR = REPO_ROOT / "k8s/scheduling"
 RUNS_DIR = REPO_ROOT / "runs"
 
-# Presets aligned with k8s/scheduling/job-dlrm-binpack.yaml and job-*-yolo-batch.yaml
+# Presets for batch Jobs (see k8s/scheduling/experiment-template.yaml).
 PROFILES: dict[str, dict[str, str | int]] = {
+    "yolo": {
+        "completions": 10,
+        "parallelism": 5,
+        "cpu_request": "500m",
+        "cpu_limit": "1000m",
+        "mem_request": "512Mi",
+        "mem_limit": "1024Mi",
+    },
     "dlrm": {
         "completions": 10,
         "parallelism": 5,
         "cpu_request": "200m",
         "cpu_limit": "500m",
         "mem_request": "512Mi",
-        "mem_limit": "1024Mi",
-    },
-    "yolo": {
-        "completions": 4,
-        "parallelism": 2,
-        "cpu_request": "500m",
-        "cpu_limit": "1000m",
-        "mem_request": "512Mi",
-        "mem_limit": "1024Mi",
+        "mem_limit": "1024Mi",  # fixed from 512Mi to prevent OOM
     },
     "resnet": {
-        "completions": 1,
-        "parallelism": 1,
-        "cpu_request": "500m",
-        "cpu_limit": "1000m",
-        "mem_request": "512Mi",
-        "mem_limit": "1024Mi",
+        "completions": 10,
+        "parallelism": 5,
+        "cpu_request": "800m",
+        "cpu_limit": "1500m",
+        "mem_request": "1024Mi",
+        "mem_limit": "2048Mi",
     },
     "bert": {
-        "completions": 1,
-        "parallelism": 1,
-        "cpu_request": "500m",
-        "cpu_limit": "1000m",
-        "mem_request": "512Mi",
-        "mem_limit": "1024Mi",
+        "completions": 10,
+        "parallelism": 5,
+        "cpu_request": "1000m",
+        "cpu_limit": "2000m",
+        "mem_request": "2Gi",
+        "mem_limit": "4Gi",  # BERT is memory-heavy; needs more room
     },
 }
 
