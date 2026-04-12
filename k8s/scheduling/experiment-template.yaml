@@ -1,0 +1,26 @@
+# Rendered by run_experiment.py (see script for placeholder names). Do not apply raw.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: __JOB_NAME__
+  namespace: __NAMESPACE__
+spec:
+  completions: __COMPLETIONS__
+  parallelism: __PARALLELISM__
+  template:
+    spec:
+__SCHEDULER_LINE__
+      containers:
+        - name: ml-worker
+          image: __IMAGE__
+          imagePullPolicy: __IMAGE_PULL_POLICY__
+          args: ["--task", "__TASK__"]
+          resources:
+            requests:
+              cpu: "__CPU_REQUEST__"
+              memory: "__MEM_REQUEST__"
+            limits:
+              cpu: "__CPU_LIMIT__"
+              memory: "__MEM_LIMIT__"
+      restartPolicy: Never
+  backoffLimit: 0
