@@ -5,3 +5,7 @@ __pycache__/
 *.pyc
 .Python
 .pytest_cache/
+
+# Experiment pipeline outputs (directory kept via runs/.gitkeep)
+runs/*
+!runs/.gitkeep
