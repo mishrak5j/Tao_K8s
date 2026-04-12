@@ -36,6 +36,30 @@ make install-secondary-scheduler   # bin-pack + spread (secondary kube-scheduler
 make install-volcano               # gang (Volcano)
 ```
 
+## Automated experiment pipeline
+
+`run_experiment.py` implements a control loop: **preflight cleanup** (delete existing Jobs/Pods in `ml-scheduling`) → **ensure secondary schedulers** (for `binpack` / `spread`) → **apply** a rendered [`k8s/scheduling/experiment-template.yaml`](k8s/scheduling/experiment-template.yaml) → **wait** for Job success → **collect logs** per pod → **`metrics.csv`** + **`raw_logs.txt`** + **`latency_chart.png`** under `runs/` → **delete the Job** (unless `--skip-teardown`).
+
+**Prerequisites:** `kubectl` configured for your cluster; namespace and quota applied (`kubectl apply -f k8s/00-namespace-quota.yaml`); image available on nodes (**Minikube:** `make build` + `make load`, defaults `image: ml-workload:v1`, `imagePullPolicy: Never`).
+
+**Host packages (charts only):**
+
+```bash
+python3 -m pip install -r requirements-experiments.txt
+```
+
+**Examples:**
+
+```bash
+python3 run_experiment.py --model dlrm --strategy binpack
+python3 run_experiment.py --model yolo --strategy spread
+python3 run_experiment.py --model resnet --strategy default
+```
+
+**Makefile shortcut:** `make experiment` (override `MODEL` / `STRATEGY`).
+
+Logs are parsed from `task_common.print_result` lines (`TASK_NAME`, `METRIC`, `VALUE`, `TOTAL_DURATION_SECONDS`). If matplotlib is missing, the script still writes CSV and raw logs and skips the PNG with a stderr note.
+
 ## Phase 2 — GKE + Artifact Registry
 
 With APIs enabled, a Docker Artifact Registry repo, and a running cluster:
