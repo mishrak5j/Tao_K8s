@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ml-sched-binpack-dlrm
+  namespace: ml-scheduling
+spec:
+  completions: 10
+  parallelism: 5
+  template:
+    spec:
+      schedulerName: binpack-scheduler
+      containers:
+        - name: ml-worker
+          image: ml-workload:v1
+          imagePullPolicy: Never
+          args: ["--task", "dlrm"]
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1024Mi"
+      restartPolicy: Never
+  backoffLimit: 0
