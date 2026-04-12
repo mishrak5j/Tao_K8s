@@ -9,3 +9,9 @@ Test #,Workload,Brain (Scheduler),What to watch for
 10,ALL 4,Volcano,Does it handle the queue fairly?
 11,ALL 4,Bin-pack,"Does the cluster ""Freeze"" because too many things are on one node?"
 12,ALL 4,Spread,"Does it create ""Fragmentation"" where no ""Big"" job can fit anymore?"
+
+Test #,Workload,Brain (Scheduler),What to watch for
+1,ResNet (Dist),Volcano,"The ""Golden Standard""—all pods should start at once."
+2,ResNet (Dist),Default,"Look for ""Partial Starts"" where the Master waits for a Worker."
+3,BERT (Dist),Spread,Check if Network Latency increases because pods are far apart.
+4,BERT (Dist),Bin-pack,Watch for Resource Contention (Master and Workers fighting for 1 GPU).
