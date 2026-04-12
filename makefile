@@ -17,9 +17,13 @@ AR_REPO ?= ml-repo
 GCP_CLUSTER ?= tao-cluster
 AR_IMAGE ?= $(GCP_REGION)-docker.pkg.dev/$(GCP_PROJECT)/$(AR_REPO)/$(IMAGE_NAME)
 
+MODEL ?= dlrm
+STRATEGY ?= binpack
+
 .PHONY: setup build load run lint lint-fix clean clean-jobs build-gpu run-gpu-resnet run-bench-resnet smoke \
 	install-secondary-scheduler uninstall-secondary-scheduler install-volcano \
-	gcp-kustomize gcp-push gcp-get-credentials gcp-apply-workloads gcp-phase2
+	gcp-kustomize gcp-push gcp-get-credentials gcp-apply-workloads gcp-phase2 \
+	experiment
 
 # --- GKE Phase 2: push image + kubectl apply (after cluster and AR repo exist) ---
 gcp-kustomize:
@@ -106,6 +110,10 @@ install-volcano:
 clean-jobs:
 	kubectl delete jobs -n ml-scheduling --all --ignore-not-found=true
 	-kubectl delete jobs.batch.volcano.sh -n ml-scheduling --all --ignore-not-found=true
+
+# Automated benchmark: run_experiment.py (requires kubectl + optional pip install -r requirements-experiments.txt)
+experiment:
+	python3 run_experiment.py --model $(MODEL) --strategy $(STRATEGY)
 
 # Tear down the cluster
 clean:
