@@ -1,0 +1,13 @@
+model,strategy,run_folder,n_pods,mean_duration_s,std_duration_s,mean_metric,std_metric,metric_name
+bert,default,20260412T034358Z_bert_default,10,172.5037,44.7084,-0.0067594,2.59058e-06,final_loss
+bert,binpack,20260412T045448Z_bert_binpack,10,185.4443,40.1668,-0.0067606,2.54733e-06,final_loss
+bert,spread,20260412T054517Z_bert_spread,10,108.9689,32.5293,-0.0067591,3.95671e-06,final_loss
+dlrm,default,20260412T031716Z_dlrm_default,10,72.4919,6.1224,-4.50516e+32,1.35155e+33,final_loss
+dlrm,binpack,20260412T050854Z_dlrm_binpack,10,60.1116,8.4668,-1.1432e+19,3.61511e+19,final_loss
+dlrm,spread,20260412T055356Z_dlrm_spread,10,66.3507,8.0542,-8.32941e+09,2.49822e+10,final_loss
+resnet,default,20260412T033232Z_resnet_default,10,181.0016,40.2103,-2819.48,65.4958,final_loss
+resnet,binpack,20260412T044014Z_resnet_binpack,10,192.9721,32.5178,-2811.78,59.1765,final_loss
+resnet,spread,20260412T053444Z_resnet_spread,10,143.1766,37.1439,-2805.76,57.2341,final_loss
+yolo,default,20260412T032346Z_yolo_default,10,30.2652,21.6756,1210.61,867.021,avg_latency_ms
+yolo,binpack,20260412T043757Z_yolo_binpack,10,19.9215,4.3753,796.856,175.011,avg_latency_ms
+yolo,spread,20260412T053240Z_yolo_spread,10,13.7256,2.7554,549.021,110.216,avg_latency_ms
