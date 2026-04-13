@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tao_K8s | Kubernetes Scheduling for ML Workloads</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "surface-bright":"#f7f9fb","outline":"#737785","on-primary-container":"#faf9ff",
+        "primary-container":"#326ce5","on-secondary-container":"#57657a",
+        "primary-fixed-dim":"#b2c5ff","inverse-primary":"#b2c5ff",
+        "on-secondary":"#ffffff","tertiary-container":"#6b7289",
+        "tertiary-fixed":"#dae2fd","secondary-fixed":"#d5e3fc",
+        "inverse-on-surface":"#eff1f3","primary-fixed":"#dae2ff",
+        "on-background":"#191c1e","on-primary-fixed":"#001848",
+        "error":"#ba1a1a","surface-dim":"#d8dadc",
+        "tertiary-fixed-dim":"#bec6e0","on-error-container":"#93000a",
+        "secondary-fixed-dim":"#b9c7df","surface-tint":"#0b56cf",
+        "on-tertiary-container":"#faf9ff","inverse-surface":"#2d3133",
+        "surface":"#f7f9fb","outline-variant":"#c3c6d6",
+        "tertiary":"#525a70","surface-variant":"#e0e3e5",
+        "on-primary":"#ffffff","on-error":"#ffffff",
+        "secondary-container":"#d5e3fc",
+        "surface-container-highest":"#e0e3e5",
+        "on-surface-variant":"#434654","surface-container":"#eceef0",
+        "surface-container-low":"#f2f4f6","surface-container-lowest":"#ffffff",
+        "on-tertiary":"#ffffff","background":"#f7f9fb",
+        "secondary":"#515f74","error-container":"#ffdad6",
+        "primary":"#0052ca","surface-container-high":"#e6e8ea",
+        "on-surface":"#191c1e","on-tertiary-fixed":"#131b2e"
+      },
+      borderRadius: { DEFAULT:"0.125rem", lg:"0.25rem", xl:"0.5rem", full:"0.75rem" },
+      fontFamily: {
+        headline: ["Space Grotesk"],
+        body: ["Inter"],
+        label: ["Inter"],
+        mono: ["JetBrains Mono"]
+      }
+    }
+  }
+}
+</script>
+<style>
+body { font-family: 'Inter', sans-serif; }
+.headline-font { font-family: 'Space Grotesk', sans-serif; }
+.mono-font { font-family: 'JetBrains Mono', monospace; }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+::selection { background: #326CE5; color: #fff; }
+.tab-btn.active { color: #0052ca; border-bottom-color: #0052ca; }
+details summary { list-style: none; }
+details summary::-webkit-details-marker { display: none; }
+</style>
+</head>
+<body class="bg-surface text-on-surface">
+
+<!-- ═══════ Top Nav ═══════ -->
+<nav class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md shadow-sm flex items-center justify-between px-6 py-3">
+  <div class="flex items-center gap-8">
+    <a href="#" class="text-xl font-bold tracking-tighter text-slate-900 headline-font">Tao<span class="text-primary">_K8s</span></a>
+    <div class="hidden md:flex gap-6 items-center font-headline text-sm tracking-tight">
+      <a class="text-slate-600 hover:text-slate-900 transition-colors" href="#about">About</a>
+      <a class="text-slate-600 hover:text-slate-900 transition-colors" href="#pipeline">Pipeline</a>
+      <a class="text-slate-600 hover:text-slate-900 transition-colors" href="#workloads">Workloads</a>
+      <a class="text-slate-600 hover:text-slate-900 transition-colors" href="#scheduling">Scheduling</a>
+      <a class="text-slate-600 hover:text-slate-900 transition-colors" href="#results">Results</a>
+      <a class="text-slate-600 hover:text-slate-900 transition-colors" href="#quickstart">Quick Start</a>
+    </div>
+  </div>
+  <div class="flex items-center gap-3">
+    <a href="https://github.com/mishrak5j/Tao_K8s" target="_blank" class="hidden sm:flex items-center gap-2 text-sm text-slate-600 hover:text-primary transition-colors">
+      <span class="material-symbols-outlined text-lg">code</span> GitHub
+    </a>
+    <button id="mobile-toggle" class="md:hidden p-2 hover:bg-slate-100 rounded-lg" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')">
+      <span class="material-symbols-outlined">menu</span>
+    </button>
+  </div>
+</nav>
+<div id="mobile-menu" class="hidden fixed top-14 left-0 right-0 z-40 bg-white shadow-lg border-b border-slate-200 md:hidden">
+  <div class="flex flex-col p-4 gap-3 text-sm font-headline">
+    <a class="py-2 text-slate-700 hover:text-primary" href="#about">About</a>
+    <a class="py-2 text-slate-700 hover:text-primary" href="#pipeline">Pipeline</a>
+    <a class="py-2 text-slate-700 hover:text-primary" href="#workloads">Workloads</a>
+    <a class="py-2 text-slate-700 hover:text-primary" href="#scheduling">Scheduling</a>
+    <a class="py-2 text-slate-700 hover:text-primary" href="#results">Results</a>
+    <a class="py-2 text-slate-700 hover:text-primary" href="#quickstart">Quick Start</a>
+  </div>
+</div>
+
+<!-- ═══════ Sidebar ═══════ -->
+<aside class="fixed left-0 top-14 h-[calc(100vh-56px)] w-60 overflow-y-auto bg-slate-50 hidden lg:flex flex-col py-8 gap-1 border-r border-slate-200/60">
+  <div class="px-6 mb-6">
+    <h3 class="text-base font-semibold text-slate-900 headline-font">Documentation</h3>
+    <p class="text-[11px] text-slate-400 font-mono mt-1">CSC4311 &middot; Spring 2026</p>
+  </div>
+  <nav class="flex flex-col gap-0.5 px-2 text-sm" id="sidebar-nav">
+    <a href="#about"       class="sidebar-link flex items-center gap-3 text-slate-500 pl-4 hover:text-slate-900 hover:bg-slate-200/50 py-2 transition-colors">
+      <span class="material-symbols-outlined text-[18px]">info</span> About</a>
+    <a href="#pipeline"    class="sidebar-link flex items-center gap-3 text-slate-500 pl-4 hover:text-slate-900 hover:bg-slate-200/50 py-2 transition-colors">
+      <span class="material-symbols-outlined text-[18px]">account_tree</span> Pipeline</a>
+    <a href="#workloads"   class="sidebar-link flex items-center gap-3 text-slate-500 pl-4 hover:text-slate-900 hover:bg-slate-200/50 py-2 transition-colors">
+      <span class="material-symbols-outlined text-[18px]">memory</span> Workloads</a>
+    <a href="#scheduling"  class="sidebar-link flex items-center gap-3 text-slate-500 pl-4 hover:text-slate-900 hover:bg-slate-200/50 py-2 transition-colors">
+      <span class="material-symbols-outlined text-[18px]">settings_suggest</span> Scheduling</a>
+    <a href="#results"     class="sidebar-link flex items-center gap-3 text-slate-500 pl-4 hover:text-slate-900 hover:bg-slate-200/50 py-2 transition-colors">
+      <span class="material-symbols-outlined text-[18px]">insert_chart</span> Results</a>
+    <a href="#quickstart"  class="sidebar-link flex items-center gap-3 text-slate-500 pl-4 hover:text-slate-900 hover:bg-slate-200/50 py-2 transition-colors">
+      <span class="material-symbols-outlined text-[18px]">rocket_launch</span> Quick Start</a>
+    <a href="#experiments" class="sidebar-link flex items-center gap-3 text-slate-500 pl-4 hover:text-slate-900 hover:bg-slate-200/50 py-2 transition-colors">
+      <span class="material-symbols-outlined text-[18px]">science</span> Experiments</a>
+    <a href="#output"      class="sidebar-link flex items-center gap-3 text-slate-500 pl-4 hover:text-slate-900 hover:bg-slate-200/50 py-2 transition-colors">
+      <span class="material-symbols-outlined text-[18px]">folder_open</span> Output</a>
+    <a href="#makefile"    class="sidebar-link flex items-center gap-3 text-slate-500 pl-4 hover:text-slate-900 hover:bg-slate-200/50 py-2 transition-colors">
+      <span class="material-symbols-outlined text-[18px]">terminal</span> Makefile</a>
+    <a href="#custom"      class="sidebar-link flex items-center gap-3 text-slate-500 pl-4 hover:text-slate-900 hover:bg-slate-200/50 py-2 transition-colors">
+      <span class="material-symbols-outlined text-[18px]">extension</span> Custom Workload</a>
+    <a href="#troubleshooting" class="sidebar-link flex items-center gap-3 text-slate-500 pl-4 hover:text-slate-900 hover:bg-slate-200/50 py-2 transition-colors">
+      <span class="material-symbols-outlined text-[18px]">build</span> Troubleshooting</a>
+  </nav>
+  <div class="mt-auto px-6 py-6 border-t border-slate-200/50">
+    <p class="text-[11px] text-slate-400">Kshitij Mishra</p>
+    <p class="text-[11px] text-slate-400">Cloud Computing</p>
+  </div>
+</aside>
+
+<!-- ═══════ Main Content ═══════ -->
+<main class="lg:ml-60 w-full min-h-screen bg-surface pt-14">
+
+  <!-- Hero -->
+  <header class="relative px-6 sm:px-12 pt-20 pb-16 overflow-hidden">
+    <div class="absolute top-0 right-0 -z-10 opacity-10">
+      <div class="w-[600px] h-[600px] bg-gradient-to-br from-primary to-primary-container blur-3xl rounded-full translate-x-1/2 -translate-y-1/2"></div>
+    </div>
+    <div class="max-w-4xl">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-container/10 text-primary text-xs font-semibold uppercase tracking-wider mb-6">
+        <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> Project Tao_K8s
+      </div>
+      <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight headline-font text-on-surface mb-4 leading-tight">
+        Optimized Kubernetes Scheduling for <span class="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-container">ML Workloads</span>
+      </h1>
+      <p class="text-lg sm:text-xl text-on-surface-variant font-light leading-relaxed max-w-2xl mb-6">
+        An automated framework for benchmarking Default, Bin-pack, and Spread scheduling strategies against four real PyTorch training workloads on Kubernetes.
+      </p>
+      <p class="text-sm text-on-surface-variant mb-8">CSC4311 &middot; Cloud Computing &middot; Spring 2026 &middot; Kshitij Mishra</p>
+      <div class="flex flex-wrap gap-3 mb-10">
+        <a href="#results" class="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-lg text-sm font-semibold hover:bg-primary-container transition-all shadow-md">
+          <span class="material-symbols-outlined text-lg">insert_chart</span> View Results
+        </a>
+        <a href="#quickstart" class="inline-flex items-center gap-2 bg-surface-container-high text-on-surface px-6 py-3 rounded-lg text-sm font-semibold hover:bg-surface-container-highest transition-all">
+          <span class="material-symbols-outlined text-lg">rocket_launch</span> Quick Start
+        </a>
+      </div>
+      <!-- Powered-by logo strip -->
+      <div class="flex items-center gap-3 flex-wrap">
+        <span class="text-xs uppercase tracking-widest text-on-surface-variant font-semibold mr-2">Powered by</span>
+        <div class="flex items-center gap-5 opacity-70">
+          <img src="kubernetes.svg"  alt="Kubernetes" class="h-8 w-auto" title="Kubernetes"/>
+          <img src="docker-icon.svg" alt="Docker"     class="h-7 w-auto" title="Docker"/>
+          <img src="pytorch-icon.svg"alt="PyTorch"    class="h-8 w-auto" title="PyTorch"/>
+          <img src="python.svg"      alt="Python"     class="h-8 w-auto" title="Python"/>
+          <img src="google-cloud.svg"alt="Google Cloud"class="h-7 w-auto" title="Google Cloud"/>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="px-6 sm:px-12 pb-24 max-w-5xl">
+
+    <!-- ═══════ ABOUT ═══════ -->
+    <section class="mb-20 scroll-mt-20" id="about">
+      <h2 class="text-3xl font-bold headline-font mb-4 flex items-center gap-3">
+        What This Project Does <span class="h-px grow bg-surface-container-high"></span>
+      </h2>
+      <p class="text-on-surface-variant leading-relaxed mb-4">
+        Machine learning training jobs consume significant compute, memory, and I/O. When you run these jobs on a <strong class="text-on-surface">Kubernetes cluster</strong>, the <strong class="text-on-surface">scheduler</strong> decides which node each pod lands on &mdash; and that placement directly affects how fast your job finishes.
+      </p>
+      <p class="text-on-surface-variant leading-relaxed mb-10">
+        This project packages <strong class="text-on-surface">four real PyTorch workloads</strong> (ResNet, BERT, YOLO, DLRM) into a Docker container, deploys them as Kubernetes batch Jobs (10 pods each), and runs the exact same workload under three scheduling strategies: <strong class="text-on-surface">Default</strong>, <strong class="text-on-surface">Bin-pack</strong>, and <strong class="text-on-surface">Spread</strong>. By comparing wall-clock time, resource contention, and pod placement, we answer: <em>does the scheduler choice actually matter for ML workloads?</em>
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-surface-container-lowest p-7 rounded-2xl shadow-sm border border-outline-variant/10">
+          <img src="docker-icon.svg" alt="Docker" class="h-9 w-auto mb-4"/>
+          <h3 class="text-base font-bold mb-2">Docker</h3>
+          <p class="text-sm text-on-surface-variant leading-relaxed">All four PyTorch benchmarks packaged into a single container image (<span class="mono-font text-primary text-xs">ml-workload:v1</span>). Built once, runs identically on Minikube or cloud GKE &mdash; only the scheduling changes.</p>
+        </div>
+        <div class="bg-surface-container-lowest p-7 rounded-2xl shadow-sm border border-outline-variant/10">
+          <img src="kubernetes.svg" alt="Kubernetes" class="h-10 w-auto mb-4"/>
+          <h3 class="text-base font-bold mb-2">Kubernetes</h3>
+          <p class="text-sm text-on-surface-variant leading-relaxed">Batch Jobs with <span class="mono-font text-primary text-xs">10 completions</span> and <span class="mono-font text-primary text-xs">parallelism 5</span>. The scheduler decides which node each pod goes to. On a multi-node cluster, this placement is where Default, Bin-pack, and Spread diverge.</p>
+        </div>
+        <div class="bg-surface-container-lowest p-7 rounded-2xl shadow-sm border border-outline-variant/10">
+          <img src="python.svg" alt="Python" class="h-10 w-auto mb-4"/>
+          <h3 class="text-base font-bold mb-2">ml-scheduling namespace</h3>
+          <p class="text-sm text-on-surface-variant leading-relaxed">Dedicated namespace with <strong class="text-on-surface">ResourceQuota</strong> (4 CPU, 5 Gi memory, 20 pods) and <strong class="text-on-surface">LimitRange</strong> &mdash; simulating a realistic shared-cluster environment with hard resource ceilings.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════ PIPELINE ═══════ -->
+    <section class="mb-20 scroll-mt-20" id="pipeline">
+      <h2 class="text-3xl font-bold headline-font mb-4 flex items-center gap-3">
+        How It Works <span class="h-px grow bg-surface-container-high"></span>
+      </h2>
+      <p class="text-on-surface-variant mb-8">The exact pipeline that <span class="mono-font text-primary text-sm">run_experiment.py</span> executes, step by step.</p>
+
+      <!-- Workflow diagram -->
+      <div class="bg-surface-container-lowest p-8 rounded-2xl shadow-sm border border-outline-variant/10 mb-10">
+        <h3 class="text-base font-semibold mb-6 text-primary">Workflow Architecture</h3>
+        <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-5">
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-14 h-14 bg-surface-container-high rounded-xl flex items-center justify-center shadow p-2"><img src="docker-icon.svg" alt="Docker" class="h-7 w-auto"/></div>
+            <span class="text-[11px] mono-font text-on-surface-variant">Build</span>
+          </div>
+          <span class="material-symbols-outlined text-outline text-sm">arrow_forward</span>
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-14 h-14 bg-surface-container-high rounded-xl flex items-center justify-center shadow"><span class="material-symbols-outlined text-primary text-2xl">settings_suggest</span></div>
+            <span class="text-[11px] mono-font text-on-surface-variant">Scheduler</span>
+          </div>
+          <span class="material-symbols-outlined text-outline text-sm">arrow_forward</span>
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-lg p-2"><img src="kubernetes.svg" alt="K8s" class="h-10 w-auto brightness-[10]"/></div>
+            <span class="text-[11px] font-bold text-primary">Deploy</span>
+          </div>
+          <span class="material-symbols-outlined text-outline text-sm">arrow_forward</span>
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-14 h-14 bg-surface-container-high rounded-xl flex items-center justify-center shadow"><span class="material-symbols-outlined text-primary text-2xl">hourglass_top</span></div>
+            <span class="text-[11px] mono-font text-on-surface-variant">Wait</span>
+          </div>
+          <span class="material-symbols-outlined text-outline text-sm">arrow_forward</span>
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-14 h-14 bg-surface-container-high rounded-xl flex items-center justify-center shadow"><span class="material-symbols-outlined text-primary text-2xl">download</span></div>
+            <span class="text-[11px] mono-font text-on-surface-variant">Collect</span>
+          </div>
+          <span class="material-symbols-outlined text-outline text-sm">arrow_forward</span>
+          <div class="flex flex-col items-center gap-2">
+            <div class="w-14 h-14 bg-surface-container-high rounded-xl flex items-center justify-center shadow"><span class="material-symbols-outlined text-primary text-2xl">save</span></div>
+            <span class="text-[11px] mono-font text-on-surface-variant">Artifacts</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pipeline Steps -->
+      <div class="relative border-l-2 border-primary/20 ml-4 space-y-8">
+        <!-- Step 1 -->
+        <div class="relative pl-8">
+          <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-primary border-[3px] border-surface shadow"></div>
+          <h3 class="text-base font-bold mb-1">Preflight Cleanup <span class="ml-2 text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">automatic</span></h3>
+          <p class="text-sm text-on-surface-variant mb-2">Deletes all existing Jobs and Pods in <span class="mono-font text-primary text-xs">ml-scheduling</span> so the cluster is clean before each run.</p>
+          <div class="bg-inverse-surface rounded-lg p-4 overflow-x-auto">
+            <pre class="mono-font text-xs text-primary-fixed-dim leading-relaxed"><code>kubectl delete jobs -n ml-scheduling --all
+kubectl delete pods -n ml-scheduling --all</code></pre>
+          </div>
+          <p class="text-xs text-on-surface-variant mt-2">Polls until namespace is empty (120s timeout). Skip with <span class="mono-font text-primary">--skip-cleanup</span>.</p>
+        </div>
+        <!-- Step 2 -->
+        <div class="relative pl-8">
+          <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-green-500 border-[3px] border-surface shadow"></div>
+          <h3 class="text-base font-bold mb-1">Ensure Secondary Schedulers <span class="ml-2 text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-500/10 text-green-700">binpack / spread only</span></h3>
+          <p class="text-sm text-on-surface-variant mb-2">If strategy is <span class="mono-font text-primary text-xs">binpack</span> or <span class="mono-font text-primary text-xs">spread</span>, the script applies RBAC and Deployment manifests, then waits for scheduler pods to be ready.</p>
+          <div class="bg-inverse-surface rounded-lg p-4 overflow-x-auto">
+            <pre class="mono-font text-xs text-primary-fixed-dim leading-relaxed"><code>secondary-scheduler-rbac.yaml &rarr; secondary-scheduler-binpack.yaml &rarr; secondary-scheduler-spread.yaml
+kubectl rollout status (180s timeout per deployment)</code></pre>
+          </div>
+        </div>
+        <!-- Step 3 -->
+        <div class="relative pl-8">
+          <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-amber-500 border-[3px] border-surface shadow"></div>
+          <h3 class="text-base font-bold mb-1">Render Job Manifest <span class="ml-2 text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700">template</span></h3>
+          <p class="text-sm text-on-surface-variant mb-2">Reads <span class="mono-font text-primary text-xs">experiment-template.yaml</span> and substitutes placeholders with the chosen model profile and scheduler.</p>
+          <div class="flex flex-wrap gap-2 mt-3">
+            <span class="mono-font text-[11px] px-2 py-1 rounded bg-surface-container-high text-on-surface-variant">__JOB_NAME__</span>
+            <span class="mono-font text-[11px] px-2 py-1 rounded bg-surface-container-high text-on-surface-variant">__COMPLETIONS__</span>
+            <span class="mono-font text-[11px] px-2 py-1 rounded bg-surface-container-high text-on-surface-variant">__PARALLELISM__</span>
+            <span class="mono-font text-[11px] px-2 py-1 rounded bg-surface-container-high text-on-surface-variant">__CPU_REQUEST__</span>
+            <span class="mono-font text-[11px] px-2 py-1 rounded bg-surface-container-high text-on-surface-variant">__MEM_REQUEST__</span>
+            <span class="mono-font text-[11px] px-2 py-1 rounded bg-surface-container-high text-on-surface-variant">__SCHEDULER_LINE__</span>
+            <span class="mono-font text-[11px] px-2 py-1 rounded bg-surface-container-high text-on-surface-variant">__IMAGE__</span>
+          </div>
+        </div>
+        <!-- Step 4 -->
+        <div class="relative pl-8">
+          <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-primary border-[3px] border-surface shadow"></div>
+          <h3 class="text-base font-bold mb-1">Apply Job & Wait</h3>
+          <p class="text-sm text-on-surface-variant">Creates the Job in Kubernetes and polls every 2s until all pods succeed or timeout (default 3600s).</p>
+        </div>
+        <!-- Step 5 -->
+        <div class="relative pl-8">
+          <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-primary border-[3px] border-surface shadow"></div>
+          <h3 class="text-base font-bold mb-1">Collect Pod Logs</h3>
+          <p class="text-sm text-on-surface-variant mb-2">Fetches logs from every pod and parses the standardized result block.</p>
+          <div class="flex flex-wrap gap-2 mt-2">
+            <span class="mono-font text-[11px] px-2 py-1 rounded bg-primary/5 text-primary border border-primary/20">TASK_NAME=resnet50</span>
+            <span class="mono-font text-[11px] px-2 py-1 rounded bg-primary/5 text-primary border border-primary/20">METRIC=final_loss</span>
+            <span class="mono-font text-[11px] px-2 py-1 rounded bg-primary/5 text-primary border border-primary/20">VALUE=-2793.046</span>
+            <span class="mono-font text-[11px] px-2 py-1 rounded bg-primary/5 text-primary border border-primary/20">TOTAL_DURATION_SECONDS=203.19</span>
+          </div>
+        </div>
+        <!-- Step 6 -->
+        <div class="relative pl-8">
+          <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-primary border-[3px] border-surface shadow"></div>
+          <h3 class="text-base font-bold mb-1">Write Artifacts <span class="ml-2 text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary">output</span></h3>
+          <p class="text-sm text-on-surface-variant mb-2">Writes all collected data to a timestamped run folder under <span class="mono-font text-primary text-xs">runs/</span>.</p>
+          <div class="flex flex-wrap gap-2">
+            <span class="mono-font text-[11px] px-2 py-1 rounded bg-surface-container-high text-on-surface-variant">manifest-applied.yaml</span>
+            <span class="mono-font text-[11px] px-2 py-1 rounded bg-surface-container-high text-on-surface-variant">raw_logs.txt</span>
+            <span class="mono-font text-[11px] px-2 py-1 rounded bg-surface-container-high text-on-surface-variant">metrics.csv</span>
+            <span class="mono-font text-[11px] px-2 py-1 rounded bg-surface-container-high text-on-surface-variant">latency_chart.png</span>
+          </div>
+        </div>
+        <!-- Step 7 -->
+        <div class="relative pl-8">
+          <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-red-500 border-[3px] border-surface shadow"></div>
+          <h3 class="text-base font-bold mb-1">Teardown <span class="ml-2 text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/10 text-red-700">cleanup</span></h3>
+          <p class="text-sm text-on-surface-variant">Deletes the Job from the cluster. Skip with <span class="mono-font text-primary text-xs">--skip-teardown</span> to inspect pods.</p>
+        </div>
+        <!-- Step 8 -->
+        <div class="relative pl-8">
+          <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-primary border-[3px] border-surface shadow"></div>
+          <h3 class="text-base font-bold mb-1">Aggregate & Visualize <span class="ml-2 text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant">separate script</span></h3>
+          <p class="text-sm text-on-surface-variant mb-2">After all experiments, aggregate into comparison charts.</p>
+          <div class="bg-inverse-surface rounded-lg p-4 overflow-x-auto">
+            <pre class="mono-font text-xs text-primary-fixed-dim leading-relaxed"><code>python3 scripts/visualize_runs.py          # basic charts
+python3 scripts/visualize_presentation.py  # presentation-quality charts</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════ WORKLOADS ═══════ -->
+    <section class="mb-20 scroll-mt-20" id="workloads">
+      <h2 class="text-3xl font-bold headline-font mb-4 flex items-center gap-3">
+        ML Workloads <span class="h-px grow bg-surface-container-high"></span>
+      </h2>
+      <p class="text-on-surface-variant mb-8">Four PyTorch benchmarks, one entrypoint: <span class="mono-font text-primary text-sm">python src/run_task.py --task {resnet,bert,yolo,dlrm}</span></p>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+        <!-- ResNet -->
+        <div class="bg-surface-container-lowest p-7 rounded-2xl shadow-sm border border-outline-variant/10 relative overflow-hidden">
+          <div class="absolute top-4 right-4 opacity-10"><img src="pytorch-icon.svg" alt="" class="h-20 w-auto"/></div>
+          <span class="inline-block text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-600 mb-3">Memory Bandwidth</span>
+          <h3 class="text-lg font-bold mb-2 flex items-center gap-2"><img src="pytorch-icon.svg" alt="PyTorch" class="h-5 w-auto"/> ResNet-50</h3>
+          <p class="text-sm text-on-surface-variant">40 training steps, batch size 8, 224&times;224 images. Evaluates memory allocation limits and bus contention under heavy compute.</p>
+        </div>
+        <!-- BERT -->
+        <div class="bg-surface-container-lowest p-7 rounded-2xl shadow-sm border border-outline-variant/10 relative overflow-hidden">
+          <div class="absolute top-4 right-4 opacity-10"><img src="pytorch-icon.svg" alt="" class="h-20 w-auto"/></div>
+          <span class="inline-block text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-600 mb-3">CPU / Cache</span>
+          <h3 class="text-lg font-bold mb-2 flex items-center gap-2"><img src="pytorch-icon.svg" alt="PyTorch" class="h-5 w-auto"/> BERT-Base</h3>
+          <p class="text-sm text-on-surface-variant">30 forward + backward passes, batch size 4, seq len 128. Creates high L3 cache contention and thermal load on shared nodes.</p>
+        </div>
+        <!-- YOLO -->
+        <div class="bg-surface-container-lowest p-7 rounded-2xl shadow-sm border border-outline-variant/10 relative overflow-hidden">
+          <div class="absolute top-4 right-4 opacity-10"><img src="pytorch-icon.svg" alt="" class="h-20 w-auto"/></div>
+          <span class="inline-block text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-green-500/10 text-green-600 mb-3">Inference Latency</span>
+          <h3 class="text-lg font-bold mb-2 flex items-center gap-2"><img src="pytorch-icon.svg" alt="PyTorch" class="h-5 w-auto"/> YOLOv8n</h3>
+          <p class="text-sm text-on-surface-variant">25 inference runs after 5 warmup on random frames. Highly sensitive to core sharing and OS jitter; measures avg_latency_ms.</p>
+        </div>
+        <!-- DLRM -->
+        <div class="bg-surface-container-lowest p-7 rounded-2xl shadow-sm border border-outline-variant/10 relative overflow-hidden">
+          <div class="absolute top-4 right-4 opacity-10"><img src="pytorch-icon.svg" alt="" class="h-20 w-auto"/></div>
+          <span class="inline-block text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 mb-3">Memory / I/O</span>
+          <h3 class="text-lg font-bold mb-2 flex items-center gap-2"><img src="pytorch-icon.svg" alt="PyTorch" class="h-5 w-auto"/> DLRM Mini</h3>
+          <p class="text-sm text-on-surface-variant">26 embedding tables, 50 training steps, batch 2048. Stresses node data locality and memory capacity with numerically unstable gradients.</p>
+        </div>
+      </div>
+
+      <!-- Workload resource profiles table -->
+      <div class="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm border border-outline-variant/10">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="bg-surface-container-low border-b border-outline-variant/10">
+              <th class="px-5 py-3 font-semibold text-on-surface text-xs uppercase tracking-wider">Model</th>
+              <th class="px-5 py-3 font-semibold text-on-surface text-xs uppercase tracking-wider">Completions</th>
+              <th class="px-5 py-3 font-semibold text-on-surface text-xs uppercase tracking-wider">Parallelism</th>
+              <th class="px-5 py-3 font-semibold text-on-surface text-xs uppercase tracking-wider">CPU Req</th>
+              <th class="px-5 py-3 font-semibold text-on-surface text-xs uppercase tracking-wider">CPU Lim</th>
+              <th class="px-5 py-3 font-semibold text-on-surface text-xs uppercase tracking-wider">Mem Req</th>
+              <th class="px-5 py-3 font-semibold text-on-surface text-xs uppercase tracking-wider">Mem Lim</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-outline-variant/10">
+            <tr><td class="px-5 py-3 font-medium text-primary">YOLO</td><td class="px-5 py-3 mono-font text-xs">10</td><td class="px-5 py-3 mono-font text-xs">5</td><td class="px-5 py-3 mono-font text-xs">500m</td><td class="px-5 py-3 mono-font text-xs">1000m</td><td class="px-5 py-3 mono-font text-xs">512Mi</td><td class="px-5 py-3 mono-font text-xs">1024Mi</td></tr>
+            <tr><td class="px-5 py-3 font-medium text-primary">DLRM</td><td class="px-5 py-3 mono-font text-xs">10</td><td class="px-5 py-3 mono-font text-xs">5</td><td class="px-5 py-3 mono-font text-xs">200m</td><td class="px-5 py-3 mono-font text-xs">500m</td><td class="px-5 py-3 mono-font text-xs">512Mi</td><td class="px-5 py-3 mono-font text-xs">1024Mi</td></tr>
+            <tr><td class="px-5 py-3 font-medium text-primary">ResNet</td><td class="px-5 py-3 mono-font text-xs">10</td><td class="px-5 py-3 mono-font text-xs">5</td><td class="px-5 py-3 mono-font text-xs">800m</td><td class="px-5 py-3 mono-font text-xs">1500m</td><td class="px-5 py-3 mono-font text-xs">1024Mi</td><td class="px-5 py-3 mono-font text-xs">2048Mi</td></tr>
+            <tr><td class="px-5 py-3 font-medium text-primary">BERT</td><td class="px-5 py-3 mono-font text-xs">10</td><td class="px-5 py-3 mono-font text-xs">5</td><td class="px-5 py-3 mono-font text-xs">1000m</td><td class="px-5 py-3 mono-font text-xs">2000m</td><td class="px-5 py-3 mono-font text-xs">2Gi</td><td class="px-5 py-3 mono-font text-xs">4Gi</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ═══════ SCHEDULING ═══════ -->
+    <section class="mb-20 scroll-mt-20" id="scheduling">
+      <h2 class="text-3xl font-bold headline-font mb-4 flex items-center gap-3">
+        Scheduling Strategies <span class="h-px grow bg-surface-container-high"></span>
+      </h2>
+      <p class="text-on-surface-variant mb-8">Jobs select which scheduler places their pods via the <span class="mono-font text-primary text-sm">schedulerName</span> field.</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div class="p-7 rounded-2xl bg-surface-container-low border-l-4 border-[#4C72B0]">
+          <h4 class="font-bold text-on-surface mb-2">Default</h4>
+          <span class="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#4C72B0]/10 text-[#4C72B0] mb-3">kube-scheduler</span>
+          <p class="text-sm text-on-surface-variant leading-relaxed mb-3">Built-in Kubernetes scheduler. Balances pods across nodes with a mix of heuristics. This is the <strong class="text-on-surface">baseline</strong>.</p>
+          <span class="mono-font text-xs text-on-surface-variant">score = (cpu + mem) / 2</span>
+        </div>
+        <div class="p-7 rounded-2xl bg-primary/5 border-l-4 border-[#55A868]">
+          <h4 class="font-bold text-primary mb-2">Bin-pack</h4>
+          <span class="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#55A868]/10 text-[#55A868] mb-3">MostAllocated</span>
+          <p class="text-sm text-on-surface-variant leading-relaxed mb-3">Prefers nodes already running the most work, packing pods onto fewer nodes. Higher density, more contention.</p>
+          <span class="mono-font text-xs text-primary font-bold">score = 10 &times; (used / capacity)</span>
+        </div>
+        <div class="p-7 rounded-2xl bg-surface-container-low border-l-4 border-[#C44E52]">
+          <h4 class="font-bold text-on-surface mb-2">Spread</h4>
+          <span class="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#C44E52]/10 text-[#C44E52] mb-3">LeastAllocated</span>
+          <p class="text-sm text-on-surface-variant leading-relaxed mb-3">Prefers nodes with the most free resources, spreading pods for maximum isolation and predictable latency.</p>
+          <span class="mono-font text-xs text-on-surface-variant">score = 10 &times; (1 - used / capacity)</span>
+        </div>
+      </div>
+
+      <!-- Comparison Checklist -->
+      <h3 class="text-lg font-bold headline-font mb-4">Strategy Comparison</h3>
+      <div class="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm border border-outline-variant/10">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="bg-surface-container-low border-b border-outline-variant/10">
+              <th class="px-5 py-3 font-semibold text-on-surface text-xs uppercase tracking-wider">Feature</th>
+              <th class="px-5 py-3 font-semibold text-[#4C72B0] text-xs uppercase tracking-wider">Default</th>
+              <th class="px-5 py-3 font-semibold text-[#55A868] text-xs uppercase tracking-wider">Binpack</th>
+              <th class="px-5 py-3 font-semibold text-[#C44E52] text-xs uppercase tracking-wider">Spread</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-outline-variant/10 text-sm">
+            <tr><td class="px-5 py-3 font-medium">Primary Goal</td><td class="px-5 py-3 text-on-surface-variant">Balanced Load</td><td class="px-5 py-3 text-on-surface-variant">Cluster Density</td><td class="px-5 py-3 text-on-surface-variant">Pod Isolation</td></tr>
+            <tr><td class="px-5 py-3 font-medium">Speed</td><td class="px-5 py-3 text-on-surface-variant">Medium</td><td class="px-5 py-3 text-on-surface-variant">Slowest</td><td class="px-5 py-3 text-on-surface-variant font-semibold text-green-700">Fastest</td></tr>
+            <tr><td class="px-5 py-3 font-medium">Consistency</td><td class="px-5 py-3 text-on-surface-variant">Variable</td><td class="px-5 py-3 text-on-surface-variant">High Jitter</td><td class="px-5 py-3 text-on-surface-variant font-semibold text-green-700">Deterministic</td></tr>
+            <tr><td class="px-5 py-3 font-medium">Cost Efficiency</td><td class="px-5 py-3 text-on-surface-variant">Medium</td><td class="px-5 py-3 text-on-surface-variant font-semibold text-green-700">Highest</td><td class="px-5 py-3 text-on-surface-variant">Lowest</td></tr>
+            <tr><td class="px-5 py-3 font-medium">Best For</td><td class="px-5 py-3 text-on-surface-variant">General Purpose</td><td class="px-5 py-3 text-on-surface-variant">Batch Processing</td><td class="px-5 py-3 text-on-surface-variant">Real-time Inference</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ═══════ RESULTS ═══════ -->
+    <section class="mb-20 scroll-mt-20" id="results">
+      <h2 class="text-3xl font-bold headline-font mb-4 flex items-center gap-3">
+        Experiment Results <span class="h-px grow bg-surface-container-high"></span>
+      </h2>
+      <p class="text-on-surface-variant mb-8">Data collected from 12 experiment runs (4 models &times; 3 strategies) on GKE, 10 pods per run.</p>
+
+      <!-- Key Findings -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
+        <div class="bg-primary p-7 rounded-2xl text-white shadow-lg">
+          <span class="material-symbols-outlined mb-3 text-2xl" style="font-variation-settings: 'FILL' 1;">trending_up</span>
+          <h3 class="font-bold text-lg mb-1">+7.5%</h3>
+          <p class="text-xs text-on-primary-container/80 leading-relaxed">Binpack penalty on BERT &mdash; packing Transformers onto shared nodes introduces cache contention and measurable latency increase.</p>
+        </div>
+        <div class="bg-surface-container-highest p-7 rounded-2xl border border-outline-variant/20">
+          <span class="material-symbols-outlined mb-3 text-2xl text-green-600" style="font-variation-settings: 'FILL' 1;">bolt</span>
+          <h3 class="font-bold text-lg mb-1 text-green-700">-54.6%</h3>
+          <p class="text-xs text-on-surface-variant leading-relaxed">Spread advantage on YOLO &mdash; lightweight inference tasks see massive gains from workload isolation vs default.</p>
+        </div>
+        <div class="bg-surface-container-highest p-7 rounded-2xl border border-outline-variant/20">
+          <span class="material-symbols-outlined mb-3 text-2xl text-amber-600" style="font-variation-settings: 'FILL' 1;">balance</span>
+          <h3 class="font-bold text-lg mb-1">No "Best" Scheduler</h3>
+          <p class="text-xs text-on-surface-variant leading-relaxed">The Pareto frontier shows teams must map their workloads on a cost-vs-throughput matrix to determine the correct heuristic.</p>
+        </div>
+      </div>
+
+      <!-- Summary Table -->
+      <h3 class="text-lg font-bold headline-font mb-4">Raw Performance Data</h3>
+      <div class="bg-surface-container-lowest rounded-2xl overflow-x-auto shadow-sm border border-outline-variant/10 mb-10">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="bg-surface-container-low border-b border-outline-variant/10">
+              <th class="px-5 py-3 font-semibold text-on-surface text-xs uppercase tracking-wider">Model</th>
+              <th class="px-5 py-3 font-semibold text-on-surface text-xs uppercase tracking-wider">Strategy</th>
+              <th class="px-5 py-3 font-semibold text-on-surface text-xs uppercase tracking-wider">Pods</th>
+              <th class="px-5 py-3 font-semibold text-on-surface text-xs uppercase tracking-wider">Mean Duration</th>
+              <th class="px-5 py-3 font-semibold text-on-surface text-xs uppercase tracking-wider">Std Dev</th>
+              <th class="px-5 py-3 font-semibold text-on-surface text-xs uppercase tracking-wider">vs Default</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-outline-variant/10">
+            <tr><td class="px-5 py-3 font-medium text-primary">BERT</td><td class="px-5 py-3"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#4C72B0]"></span>Default</span></td><td class="px-5 py-3 mono-font text-xs">10</td><td class="px-5 py-3 mono-font text-xs">172.5s</td><td class="px-5 py-3 mono-font text-xs">&plusmn;44.7</td><td class="px-5 py-3 text-on-surface-variant">&mdash;</td></tr>
+            <tr><td class="px-5 py-3 font-medium text-primary">BERT</td><td class="px-5 py-3"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#55A868]"></span>Binpack</span></td><td class="px-5 py-3 mono-font text-xs">10</td><td class="px-5 py-3 mono-font text-xs">185.4s</td><td class="px-5 py-3 mono-font text-xs">&plusmn;40.2</td><td class="px-5 py-3 text-red-600 font-semibold">+7.5% slower</td></tr>
+            <tr class="bg-green-50/30"><td class="px-5 py-3 font-medium text-primary">BERT</td><td class="px-5 py-3"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#C44E52]"></span>Spread</span></td><td class="px-5 py-3 mono-font text-xs">10</td><td class="px-5 py-3 mono-font text-xs">109.0s</td><td class="px-5 py-3 mono-font text-xs">&plusmn;32.5</td><td class="px-5 py-3 text-green-700 font-semibold">-36.8% faster</td></tr>
+
+            <tr class="border-t-2 border-outline-variant/20"><td class="px-5 py-3 font-medium text-primary">DLRM</td><td class="px-5 py-3"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#4C72B0]"></span>Default</span></td><td class="px-5 py-3 mono-font text-xs">10</td><td class="px-5 py-3 mono-font text-xs">72.5s</td><td class="px-5 py-3 mono-font text-xs">&plusmn;6.1</td><td class="px-5 py-3 text-on-surface-variant">&mdash;</td></tr>
+            <tr><td class="px-5 py-3 font-medium text-primary">DLRM</td><td class="px-5 py-3"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#55A868]"></span>Binpack</span></td><td class="px-5 py-3 mono-font text-xs">10</td><td class="px-5 py-3 mono-font text-xs">60.1s</td><td class="px-5 py-3 mono-font text-xs">&plusmn;8.5</td><td class="px-5 py-3 text-green-700 font-semibold">-17.1% faster</td></tr>
+            <tr><td class="px-5 py-3 font-medium text-primary">DLRM</td><td class="px-5 py-3"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#C44E52]"></span>Spread</span></td><td class="px-5 py-3 mono-font text-xs">10</td><td class="px-5 py-3 mono-font text-xs">66.4s</td><td class="px-5 py-3 mono-font text-xs">&plusmn;8.1</td><td class="px-5 py-3 text-green-700 font-semibold">-8.5% faster</td></tr>
+
+            <tr class="border-t-2 border-outline-variant/20"><td class="px-5 py-3 font-medium text-primary">ResNet</td><td class="px-5 py-3"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#4C72B0]"></span>Default</span></td><td class="px-5 py-3 mono-font text-xs">10</td><td class="px-5 py-3 mono-font text-xs">181.0s</td><td class="px-5 py-3 mono-font text-xs">&plusmn;40.2</td><td class="px-5 py-3 text-on-surface-variant">&mdash;</td></tr>
+            <tr><td class="px-5 py-3 font-medium text-primary">ResNet</td><td class="px-5 py-3"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#55A868]"></span>Binpack</span></td><td class="px-5 py-3 mono-font text-xs">10</td><td class="px-5 py-3 mono-font text-xs">193.0s</td><td class="px-5 py-3 mono-font text-xs">&plusmn;32.5</td><td class="px-5 py-3 text-red-600 font-semibold">+6.6% slower</td></tr>
+            <tr class="bg-green-50/30"><td class="px-5 py-3 font-medium text-primary">ResNet</td><td class="px-5 py-3"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#C44E52]"></span>Spread</span></td><td class="px-5 py-3 mono-font text-xs">10</td><td class="px-5 py-3 mono-font text-xs">143.2s</td><td class="px-5 py-3 mono-font text-xs">&plusmn;37.1</td><td class="px-5 py-3 text-green-700 font-semibold">-20.9% faster</td></tr>
+
+            <tr class="border-t-2 border-outline-variant/20"><td class="px-5 py-3 font-medium text-primary">YOLO</td><td class="px-5 py-3"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#4C72B0]"></span>Default</span></td><td class="px-5 py-3 mono-font text-xs">10</td><td class="px-5 py-3 mono-font text-xs">30.3s</td><td class="px-5 py-3 mono-font text-xs">&plusmn;21.7</td><td class="px-5 py-3 text-on-surface-variant">&mdash;</td></tr>
+            <tr><td class="px-5 py-3 font-medium text-primary">YOLO</td><td class="px-5 py-3"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#55A868]"></span>Binpack</span></td><td class="px-5 py-3 mono-font text-xs">10</td><td class="px-5 py-3 mono-font text-xs">19.9s</td><td class="px-5 py-3 mono-font text-xs">&plusmn;4.4</td><td class="px-5 py-3 text-green-700 font-semibold">-34.2% faster</td></tr>
+            <tr class="bg-green-50/30"><td class="px-5 py-3 font-medium text-primary">YOLO</td><td class="px-5 py-3"><span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#C44E52]"></span>Spread</span></td><td class="px-5 py-3 mono-font text-xs">10</td><td class="px-5 py-3 mono-font text-xs">13.7s</td><td class="px-5 py-3 mono-font text-xs">&plusmn;2.8</td><td class="px-5 py-3 text-green-700 font-semibold">-54.6% faster</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Charts -->
+      <h3 class="text-lg font-bold headline-font mb-6">Visualizations</h3>
+      <div class="space-y-10">
+        <!-- Chart 1 -->
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/10 overflow-hidden">
+          <div class="p-6 border-b border-outline-variant/10">
+            <h4 class="font-bold text-base mb-1">1. Performance Baseline (Grouped Bar Chart)</h4>
+            <p class="text-sm text-on-surface-variant">Raw speed comparison &mdash; mean pod duration for each model across all three strategies with &plusmn;1 std dev error bars.</p>
+          </div>
+          <div class="p-4 bg-white flex justify-center">
+            <img src="../runs/plots/grouped_bar_mean_latency.png" alt="Grouped Bar Chart: Mean Latency" class="max-w-full h-auto rounded-lg" loading="lazy"/>
+          </div>
+          <div class="p-5 bg-surface-container-low text-sm text-on-surface-variant">
+            <strong class="text-on-surface">Analysis:</strong> Spread is the undisputed performance champion for BERT (-36.8%) and ResNet (-20.9%). Binpack introduces a measurable latency penalty on compute-heavy Transformers due to L3 cache and memory bus contention.
+          </div>
+        </div>
+        <!-- Chart 2 -->
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/10 overflow-hidden">
+          <div class="p-6 border-b border-outline-variant/10">
+            <h4 class="font-bold text-base mb-1">2. Predictability Analysis (Box & Whisker Plot)</h4>
+            <p class="text-sm text-on-surface-variant">Pod duration distributions within each 10-pod job &mdash; reveals how "unpredictable" each strategy is.</p>
+          </div>
+          <div class="p-4 bg-white flex justify-center">
+            <img src="../runs/plots/boxplot_duration_jitter.png" alt="Box Plot: Duration Jitter" class="max-w-full h-auto rounded-lg" loading="lazy"/>
+          </div>
+          <div class="p-5 bg-surface-container-low text-sm text-on-surface-variant">
+            <strong class="text-on-surface">Analysis:</strong> Look at the massive whiskers on YOLO (Default) and ResNet (Default) &mdash; pods range from 10s to 55s. Spread showcases the tightest boxes, proving that isolating workloads guarantees deterministic completion times. Binpack is tight but slower overall.
+          </div>
+        </div>
+        <!-- Chart 3 -->
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/10 overflow-hidden">
+          <div class="p-6 border-b border-outline-variant/10">
+            <h4 class="font-bold text-base mb-1">3. The "Scheduling Penalty" (Heatmap)</h4>
+            <p class="text-sm text-on-surface-variant">Percentage change in mean duration vs the Default baseline. Green = faster, red = slower.</p>
+          </div>
+          <div class="p-4 bg-white flex justify-center">
+            <img src="../runs/plots/heatmap_pct_change.png" alt="Heatmap: % Change vs Default" class="max-w-full h-auto rounded-lg" loading="lazy"/>
+          </div>
+          <div class="p-5 bg-surface-container-low text-sm text-on-surface-variant">
+            <strong class="text-on-surface">Analysis:</strong> The deep green in the Spread column for YOLO (-54.6%) is a massive win. For lightweight, highly parallel inference tasks, the default Kubernetes scheduler is highly inefficient compared to pure isolation. Meanwhile, Binpack imposes a +7.5% penalty on BERT Transformers.
+          </div>
+        </div>
+        <!-- Chart 4 -->
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant/10 overflow-hidden">
+          <div class="p-6 border-b border-outline-variant/10">
+            <h4 class="font-bold text-base mb-1">4. The Pareto Frontier (Scatter Plot)</h4>
+            <p class="text-sm text-on-surface-variant">Throughput (pods/min) vs infrastructure cost (total pod-seconds). Ideal position: bottom-right.</p>
+          </div>
+          <div class="p-4 bg-white flex justify-center">
+            <img src="../runs/plots/pareto_scatter.png" alt="Pareto Scatter: Cost vs Throughput" class="max-w-full h-auto rounded-lg" loading="lazy"/>
+          </div>
+          <div class="p-5 bg-surface-container-low text-sm text-on-surface-variant">
+            <strong class="text-on-surface">Analysis:</strong> There is no "perfect" scheduler. Spread dominates throughput but costs significantly more in node provisioning. Binpack acts as the budget constraint &mdash; keeping costs low at the expense of total pod-seconds. Teams must map their workloads on this matrix to determine the correct heuristic for their SLA.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════ QUICK START ═══════ -->
+    <section class="mb-20 scroll-mt-20" id="quickstart">
+      <h2 class="text-3xl font-bold headline-font mb-4 flex items-center gap-3">
+        Quick Start <span class="h-px grow bg-surface-container-high"></span>
+      </h2>
+      <p class="text-on-surface-variant mb-6">Pick your environment and follow the steps.</p>
+
+      <!-- Tab buttons -->
+      <div class="flex border-b border-outline-variant/20 mb-0">
+        <button class="tab-btn px-6 py-3 text-sm font-semibold border-b-2 border-transparent text-on-surface-variant hover:text-on-surface transition-colors active flex items-center gap-2" onclick="switchTab('minikube')">
+          <img src="kubernetes.svg" alt="" class="h-5 w-auto"/> Minikube (Local)
+        </button>
+        <button class="tab-btn px-6 py-3 text-sm font-semibold border-b-2 border-transparent text-on-surface-variant hover:text-on-surface transition-colors flex items-center gap-2" onclick="switchTab('gke')">
+          <img src="google-cloud.svg" alt="" class="h-4 w-auto"/> GKE (Cloud)
+        </button>
+      </div>
+
+      <!-- Minikube tab -->
+      <div id="tab-minikube" class="tab-panel pt-8">
+        <p class="text-sm text-on-surface-variant mb-6"><strong class="text-on-surface">Prerequisites:</strong> Docker, kubectl, Minikube, Python 3.10+, and optionally <span class="mono-font text-primary text-xs">pip install -r requirements-experiments.txt</span> (matplotlib).</p>
+        <div class="space-y-8">
+          <div class="flex gap-4">
+            <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-sm flex-shrink-0 mt-0.5">1</div>
+            <div class="flex-1">
+              <h4 class="font-bold mb-2">Start a multi-node cluster</h4>
+              <p class="text-sm text-on-surface-variant mb-3">Bin-pack vs spread only matters with 2+ nodes.</p>
+              <div class="bg-inverse-surface rounded-lg p-4 overflow-x-auto">
+                <pre class="mono-font text-xs text-primary-fixed-dim leading-relaxed"><code>make setup                  # 2 nodes, 4 CPU, 6 GB
+MINIKUBE_NODES=3 make setup # or more nodes</code></pre>
+              </div>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-sm flex-shrink-0 mt-0.5">2</div>
+            <div class="flex-1">
+              <h4 class="font-bold mb-2">Build and load the Docker image</h4>
+              <div class="bg-inverse-surface rounded-lg p-4 overflow-x-auto">
+                <pre class="mono-font text-xs text-primary-fixed-dim leading-relaxed"><code>make build    # builds ml-workload:v1
+make load     # loads into Minikube's runtime</code></pre>
+              </div>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-sm flex-shrink-0 mt-0.5">3</div>
+            <div class="flex-1">
+              <h4 class="font-bold mb-2">Create namespace and quotas</h4>
+              <div class="bg-inverse-surface rounded-lg p-4 overflow-x-auto">
+                <pre class="mono-font text-xs text-primary-fixed-dim leading-relaxed"><code>kubectl apply -f k8s/00-namespace-quota.yaml</code></pre>
+              </div>
+              <p class="text-sm text-on-surface-variant mt-2">Creates namespace <span class="mono-font text-primary text-xs">ml-scheduling</span>, ResourceQuota, and LimitRange.</p>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-sm flex-shrink-0 mt-0.5">4</div>
+            <div class="flex-1">
+              <h4 class="font-bold mb-2">Run your first experiment</h4>
+              <div class="bg-inverse-surface rounded-lg p-4 overflow-x-auto">
+                <pre class="mono-font text-xs text-primary-fixed-dim leading-relaxed"><code>make experiment MODEL=resnet STRATEGY=default</code></pre>
+              </div>
+              <p class="text-sm text-on-surface-variant mt-2">Results appear in <span class="mono-font text-primary text-xs">runs/</span>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GKE tab -->
+      <div id="tab-gke" class="tab-panel pt-8 hidden">
+        <p class="text-sm text-on-surface-variant mb-6"><strong class="text-on-surface">Prerequisites:</strong> GCP project with K8s Engine API + Artifact Registry, <span class="mono-font text-primary text-xs">gcloud</span> CLI, Docker, kubectl, Python 3.10+.</p>
+        <div class="space-y-8">
+          <div class="flex gap-4">
+            <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-sm flex-shrink-0 mt-0.5">1</div>
+            <div class="flex-1">
+              <h4 class="font-bold mb-2">Configure GCP variables</h4>
+              <div class="bg-inverse-surface rounded-lg p-4 overflow-x-auto">
+                <pre class="mono-font text-xs text-primary-fixed-dim leading-relaxed"><code>cp gcp.env.example gcp.env
+# Edit with your project info:
+GCP_PROJECT=your-gcp-project-id
+GCP_REGION=us-central1
+AR_REPO=ml-repo
+GCP_CLUSTER=tao-cluster</code></pre>
+              </div>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-sm flex-shrink-0 mt-0.5">2</div>
+            <div class="flex-1">
+              <h4 class="font-bold mb-2">Build, push, and deploy</h4>
+              <div class="bg-inverse-surface rounded-lg p-4 overflow-x-auto">
+                <pre class="mono-font text-xs text-primary-fixed-dim leading-relaxed"><code>make gcp-phase2</code></pre>
+              </div>
+              <p class="text-sm text-on-surface-variant mt-2">Builds image, pushes to Artifact Registry, gets kubectl credentials, and applies Kustomize overlay.</p>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-sm flex-shrink-0 mt-0.5">3</div>
+            <div class="flex-1">
+              <h4 class="font-bold mb-2">Install secondary schedulers & run experiments</h4>
+              <div class="bg-inverse-surface rounded-lg p-4 overflow-x-auto">
+                <pre class="mono-font text-xs text-primary-fixed-dim leading-relaxed"><code>make install-secondary-scheduler
+
+python3 run_experiment.py \
+  --model resnet --strategy binpack \
+  --image us-central1-docker.pkg.dev/YOUR_PROJECT/ml-repo/ml-workload:v1 \
+  --image-pull-policy Always</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════ EXPERIMENTS ═══════ -->
+    <section class="mb-20 scroll-mt-20" id="experiments">
+      <h2 class="text-3xl font-bold headline-font mb-4 flex items-center gap-3">
+        Running Experiments <span class="h-px grow bg-surface-container-high"></span>
+      </h2>
+      <p class="text-on-surface-variant mb-6">The script automates cleanup, scheduler setup, Job deployment, log collection, and teardown.</p>
+
+      <div class="bg-inverse-surface rounded-xl p-5 overflow-x-auto mb-8">
+        <pre class="mono-font text-sm text-primary-fixed-dim leading-relaxed"><code>python3 run_experiment.py --model &lt;MODEL&gt; --strategy &lt;STRATEGY&gt;
+
+<span class="text-tertiary-fixed-dim"># Models:     resnet | bert | yolo | dlrm</span>
+<span class="text-tertiary-fixed-dim"># Strategies: default | binpack | spread</span></code></pre>
+      </div>
+
+      <!-- CLI flags accordion -->
+      <details class="group bg-surface-container-lowest rounded-2xl border border-outline-variant/10 shadow-sm mb-4">
+        <summary class="p-5 cursor-pointer font-semibold text-sm flex justify-between items-center">
+          All CLI Flags
+          <span class="material-symbols-outlined group-open:rotate-180 transition-transform text-on-surface-variant">expand_more</span>
+        </summary>
+        <div class="px-5 pb-5 overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead>
+              <tr class="border-b border-outline-variant/10">
+                <th class="px-3 py-2 font-semibold text-on-surface text-xs uppercase tracking-wider">Flag</th>
+                <th class="px-3 py-2 font-semibold text-on-surface text-xs uppercase tracking-wider">Default</th>
+                <th class="px-3 py-2 font-semibold text-on-surface text-xs uppercase tracking-wider">Description</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-outline-variant/10">
+              <tr><td class="px-3 py-2 mono-font text-xs text-primary">--model</td><td class="px-3 py-2 text-xs italic">required</td><td class="px-3 py-2 text-on-surface-variant text-xs">resnet, bert, yolo, or dlrm</td></tr>
+              <tr><td class="px-3 py-2 mono-font text-xs text-primary">--strategy</td><td class="px-3 py-2 text-xs italic">required</td><td class="px-3 py-2 text-on-surface-variant text-xs">default, binpack, or spread</td></tr>
+              <tr><td class="px-3 py-2 mono-font text-xs text-primary">--namespace</td><td class="px-3 py-2 text-xs">ml-scheduling</td><td class="px-3 py-2 text-on-surface-variant text-xs">Kubernetes namespace</td></tr>
+              <tr><td class="px-3 py-2 mono-font text-xs text-primary">--image</td><td class="px-3 py-2 text-xs">ml-workload:v1</td><td class="px-3 py-2 text-on-surface-variant text-xs">Container image</td></tr>
+              <tr><td class="px-3 py-2 mono-font text-xs text-primary">--image-pull-policy</td><td class="px-3 py-2 text-xs">Never</td><td class="px-3 py-2 text-on-surface-variant text-xs">Never (Minikube), IfNotPresent, or Always (GKE)</td></tr>
+              <tr><td class="px-3 py-2 mono-font text-xs text-primary">--completions</td><td class="px-3 py-2 text-xs">from profile</td><td class="px-3 py-2 text-on-surface-variant text-xs">Override number of pod completions</td></tr>
+              <tr><td class="px-3 py-2 mono-font text-xs text-primary">--parallelism</td><td class="px-3 py-2 text-xs">from profile</td><td class="px-3 py-2 text-on-surface-variant text-xs">Override max parallel pods</td></tr>
+              <tr><td class="px-3 py-2 mono-font text-xs text-primary">--wait-timeout</td><td class="px-3 py-2 text-xs">3600</td><td class="px-3 py-2 text-on-surface-variant text-xs">Seconds to wait for Job</td></tr>
+              <tr><td class="px-3 py-2 mono-font text-xs text-primary">--skip-cleanup</td><td class="px-3 py-2 text-xs">off</td><td class="px-3 py-2 text-on-surface-variant text-xs">Don't delete existing Jobs before starting</td></tr>
+              <tr><td class="px-3 py-2 mono-font text-xs text-primary">--skip-teardown</td><td class="px-3 py-2 text-xs">off</td><td class="px-3 py-2 text-on-surface-variant text-xs">Leave the Job after collecting metrics</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+
+      <p class="text-sm text-on-surface-variant"><strong class="text-on-surface">Makefile shortcut:</strong> <span class="mono-font text-primary text-xs">make experiment MODEL=yolo STRATEGY=spread</span></p>
+    </section>
+
+    <!-- ═══════ OUTPUT ═══════ -->
+    <section class="mb-20 scroll-mt-20" id="output">
+      <h2 class="text-3xl font-bold headline-font mb-4 flex items-center gap-3">
+        Understanding Output <span class="h-px grow bg-surface-container-high"></span>
+      </h2>
+      <p class="text-on-surface-variant mb-6">Each run creates a timestamped folder under <span class="mono-font text-primary text-sm">runs/</span>.</p>
+
+      <div class="bg-inverse-surface rounded-xl p-5 overflow-x-auto mb-8">
+        <pre class="mono-font text-sm text-primary-fixed-dim leading-relaxed"><code>runs/20260412T044014Z_resnet_binpack/
+  manifest-applied.yaml   # Exact Job YAML applied
+  metrics.csv             # One row per pod
+  raw_logs.txt            # Full container logs
+  latency_chart.png       # Duration bar chart</code></pre>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        <div class="space-y-4">
+          <h3 class="font-bold text-base">Output Artifacts</h3>
+          <ul class="space-y-3">
+            <li class="flex items-start gap-3">
+              <span class="material-symbols-outlined text-primary text-lg mt-0.5">description</span>
+              <div>
+                <p class="text-sm font-bold">metrics.csv</p>
+                <p class="text-xs text-on-surface-variant">One row per pod: run_id, job, pod, strategy, task_name, metric, value, total_duration_seconds.</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="material-symbols-outlined text-primary text-lg mt-0.5">article</span>
+              <div>
+                <p class="text-sm font-bold">raw_logs.txt</p>
+                <p class="text-xs text-on-surface-variant">Complete container stdout sectioned by pod name for debugging.</p>
+              </div>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="material-symbols-outlined text-primary text-lg mt-0.5">image</span>
+              <div>
+                <p class="text-sm font-bold">latency_chart.png</p>
+                <p class="text-xs text-on-surface-variant">Per-pod duration bar chart with optional metric line overlay.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="bg-surface-container-high rounded-2xl p-8 flex flex-col justify-center items-center text-center">
+          <div class="text-4xl font-bold headline-font text-primary mb-2">12</div>
+          <div class="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-4">Experiment Runs</div>
+          <p class="text-sm text-on-surface-variant">4 models &times; 3 strategies, each producing a full set of per-pod metrics for statistical analysis.</p>
+        </div>
+      </div>
+
+      <h3 class="font-bold text-base mb-3">Visualization Scripts</h3>
+      <div class="bg-inverse-surface rounded-xl p-5 overflow-x-auto mb-4">
+        <pre class="mono-font text-sm text-primary-fixed-dim leading-relaxed"><code>python3 scripts/visualize_runs.py           # basic aggregation charts
+python3 scripts/visualize_presentation.py   # presentation-quality charts</code></pre>
+      </div>
+    </section>
+
+    <!-- ═══════ MAKEFILE ═══════ -->
+    <section class="mb-20 scroll-mt-20" id="makefile">
+      <h2 class="text-3xl font-bold headline-font mb-4 flex items-center gap-3">
+        Makefile Reference <span class="h-px grow bg-surface-container-high"></span>
+      </h2>
+      <div class="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm border border-outline-variant/10">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="bg-surface-container-low border-b border-outline-variant/10">
+              <th class="px-5 py-3 font-semibold text-on-surface text-xs uppercase tracking-wider w-1/3">Command</th>
+              <th class="px-5 py-3 font-semibold text-on-surface text-xs uppercase tracking-wider">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-outline-variant/10">
+            <tr><td class="px-5 py-3 mono-font text-xs text-primary font-bold">make setup</td><td class="px-5 py-3 text-sm text-on-surface-variant">Start Minikube (2 nodes, 4 CPU, 6 GB). Override: <span class="mono-font text-xs">MINIKUBE_NODES=3</span></td></tr>
+            <tr><td class="px-5 py-3 mono-font text-xs text-primary font-bold">make build</td><td class="px-5 py-3 text-sm text-on-surface-variant">Build CPU Docker image (<span class="mono-font text-xs">ml-workload:v1</span>)</td></tr>
+            <tr><td class="px-5 py-3 mono-font text-xs text-primary font-bold">make load</td><td class="px-5 py-3 text-sm text-on-surface-variant">Load image into Minikube</td></tr>
+            <tr><td class="px-5 py-3 mono-font text-xs text-primary font-bold">make smoke</td><td class="px-5 py-3 text-sm text-on-surface-variant">Build + run all 4 benchmarks in Docker (no cluster)</td></tr>
+            <tr><td class="px-5 py-3 mono-font text-xs text-primary font-bold">make experiment</td><td class="px-5 py-3 text-sm text-on-surface-variant">Run experiment with <span class="mono-font text-xs">MODEL</span> and <span class="mono-font text-xs">STRATEGY</span></td></tr>
+            <tr><td class="px-5 py-3 mono-font text-xs text-primary font-bold">make visualize-presentation</td><td class="px-5 py-3 text-sm text-on-surface-variant">Generate presentation-quality charts from experiment runs</td></tr>
+            <tr><td class="px-5 py-3 mono-font text-xs text-primary font-bold">make install-secondary-scheduler</td><td class="px-5 py-3 text-sm text-on-surface-variant">Deploy bin-pack + spread schedulers to kube-system</td></tr>
+            <tr><td class="px-5 py-3 mono-font text-xs text-primary font-bold">make gcp-phase2</td><td class="px-5 py-3 text-sm text-on-surface-variant">Full GKE: build, push, credentials, apply overlay</td></tr>
+            <tr><td class="px-5 py-3 mono-font text-xs text-primary font-bold">make clean-jobs</td><td class="px-5 py-3 text-sm text-on-surface-variant">Delete all Jobs in ml-scheduling</td></tr>
+            <tr><td class="px-5 py-3 mono-font text-xs text-primary font-bold">make clean</td><td class="px-5 py-3 text-sm text-on-surface-variant">Delete Jobs + destroy Minikube</td></tr>
+            <tr><td class="px-5 py-3 mono-font text-xs text-primary font-bold">make lint</td><td class="px-5 py-3 text-sm text-on-surface-variant">Run flake8 on src/</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ═══════ CUSTOM WORKLOAD ═══════ -->
+    <section class="mb-20 scroll-mt-20" id="custom">
+      <h2 class="text-3xl font-bold headline-font mb-4 flex items-center gap-3">
+        Bring Your Own Workload <span class="h-px grow bg-surface-container-high"></span>
+      </h2>
+      <p class="text-on-surface-variant mb-8">Want to test a different ML model or a custom Job? Here's how to plug it in.</p>
+
+      <div class="space-y-4">
+        <!-- Step 1 -->
+        <details class="group bg-surface-container-lowest rounded-2xl border border-outline-variant/10 shadow-sm" open>
+          <summary class="p-5 cursor-pointer font-semibold text-sm flex justify-between items-center">
+            Step 1 &mdash; Write a new benchmark script
+            <span class="material-symbols-outlined group-open:rotate-180 transition-transform text-on-surface-variant">expand_more</span>
+          </summary>
+          <div class="px-5 pb-5">
+            <p class="text-sm text-on-surface-variant mb-3">Create a new file in <span class="mono-font text-primary text-xs">src/</span>, for example <span class="mono-font text-primary text-xs">src/bench_vit.py</span>:</p>
+            <div class="bg-inverse-surface rounded-lg p-4 overflow-x-auto mb-3">
+              <pre class="mono-font text-xs text-primary-fixed-dim leading-relaxed"><code>import time, torch, torchvision.models as models
+from device_util import get_device
+from task_common import print_result
+
+def main() -> None:
+    device = get_device()
+    model = models.vit_b_16(weights=None).to(device)
+    model.train()
+    opt = torch.optim.AdamW(model.parameters(), lr=1e-4)
+    images = torch.randn(4, 3, 224, 224, device=device)
+    labels = torch.randint(0, 1000, (4,), device=device)
+
+    t0 = time.perf_counter()
+    for _ in range(30):
+        opt.zero_grad()
+        loss = torch.nn.CrossEntropyLoss()(model(images), labels)
+        loss.backward(); opt.step()
+    duration = time.perf_counter() - t0
+
+    print_result("vit_b16", duration,
+                 METRIC="avg_step_time_sec",
+                 VALUE=f"{duration / 30:.4f}")</code></pre>
+            </div>
+            <p class="text-sm text-on-surface-variant"><strong class="text-on-surface">Key requirement:</strong> call <span class="mono-font text-primary text-xs">print_result()</span> from <span class="mono-font text-primary text-xs">task_common.py</span> to emit the standardized output that <span class="mono-font text-primary text-xs">run_experiment.py</span> parses.</p>
+          </div>
+        </details>
+
+        <!-- Step 2 -->
+        <details class="group bg-surface-container-lowest rounded-2xl border border-outline-variant/10 shadow-sm">
+          <summary class="p-5 cursor-pointer font-semibold text-sm flex justify-between items-center">
+            Step 2 &mdash; Register in entrypoint and experiment runner
+            <span class="material-symbols-outlined group-open:rotate-180 transition-transform text-on-surface-variant">expand_more</span>
+          </summary>
+          <div class="px-5 pb-5">
+            <p class="text-sm text-on-surface-variant mb-3">Add to <span class="mono-font text-primary text-xs">src/run_task.py</span> TASKS dict, and add a resource profile to <span class="mono-font text-primary text-xs">run_experiment.py</span> PROFILES dict.</p>
+            <div class="bg-inverse-surface rounded-lg p-4 overflow-x-auto">
+              <pre class="mono-font text-xs text-primary-fixed-dim leading-relaxed"><code>PROFILES = {
+    ...
+    "vit": {
+        "completions": 10, "parallelism": 5,
+        "cpu_request": "800m", "cpu_limit": "1500m",
+        "mem_request": "1024Mi", "mem_limit": "2048Mi",
+    },
+}</code></pre>
+            </div>
+          </div>
+        </details>
+
+        <!-- Step 3 -->
+        <details class="group bg-surface-container-lowest rounded-2xl border border-outline-variant/10 shadow-sm">
+          <summary class="p-5 cursor-pointer font-semibold text-sm flex justify-between items-center">
+            Step 3 &mdash; Rebuild, run, and visualize
+            <span class="material-symbols-outlined group-open:rotate-180 transition-transform text-on-surface-variant">expand_more</span>
+          </summary>
+          <div class="px-5 pb-5">
+            <div class="bg-inverse-surface rounded-lg p-4 overflow-x-auto">
+              <pre class="mono-font text-xs text-primary-fixed-dim leading-relaxed"><code>make build && make load
+docker run --rm ml-workload:v1 --task vit
+
+python3 run_experiment.py --model vit --strategy default
+python3 run_experiment.py --model vit --strategy binpack
+python3 run_experiment.py --model vit --strategy spread
+
+python3 scripts/visualize_runs.py</code></pre>
+            </div>
+            <p class="text-sm text-on-surface-variant mt-3">The visualize script auto-discovers any model name from the run folder pattern, so no code changes needed.</p>
+          </div>
+        </details>
+
+        <!-- Step 4 -->
+        <details class="group bg-surface-container-lowest rounded-2xl border border-outline-variant/10 shadow-sm">
+          <summary class="p-5 cursor-pointer font-semibold text-sm flex justify-between items-center">
+            Alternative &mdash; Deploy a standalone Job YAML
+            <span class="material-symbols-outlined group-open:rotate-180 transition-transform text-on-surface-variant">expand_more</span>
+          </summary>
+          <div class="px-5 pb-5">
+            <div class="bg-inverse-surface rounded-lg p-4 overflow-x-auto">
+              <pre class="mono-font text-xs text-primary-fixed-dim leading-relaxed"><code>apiVersion: batch/v1
+kind: Job
+metadata:
+  name: my-custom-job
+  namespace: ml-scheduling
+spec:
+  completions: 5
+  parallelism: 3
+  template:
+    spec:
+      schedulerName: binpack-scheduler
+      containers:
+        - name: ml-worker
+          image: ml-workload:v1
+          args: ["--task", "vit"]
+          resources:
+            requests: { cpu: "500m", memory: "512Mi" }
+            limits:   { cpu: "1000m", memory: "1024Mi" }
+      restartPolicy: Never
+  backoffLimit: 0</code></pre>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ═══════ TROUBLESHOOTING ═══════ -->
+    <section class="scroll-mt-20" id="troubleshooting">
+      <h2 class="text-3xl font-bold headline-font mb-4 flex items-center gap-3">
+        Troubleshooting <span class="h-px grow bg-surface-container-high"></span>
+      </h2>
+      <p class="text-on-surface-variant mb-8">Common issues and how to fix them.</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="space-y-4">
+          <details class="group bg-surface-container-lowest rounded-2xl border border-outline-variant/10 shadow-sm" open>
+            <summary class="p-4 cursor-pointer font-semibold text-sm flex justify-between items-center">
+              <span class="flex items-center gap-2"><span class="material-symbols-outlined text-error text-lg">error</span> Scheduler pods in CrashLoopBackOff</span>
+              <span class="material-symbols-outlined group-open:rotate-180 transition-transform text-on-surface-variant">expand_more</span>
+            </summary>
+            <div class="px-4 pb-4 text-sm text-on-surface-variant">
+              The <span class="mono-font text-primary text-xs">kube-scheduler</span> image tag must match your cluster's K8s minor version. Check with <span class="mono-font text-primary text-xs">kubectl version</span> and update the image line in the secondary scheduler YAML files.
+            </div>
+          </details>
+          <details class="group bg-surface-container-lowest rounded-2xl border border-outline-variant/10 shadow-sm">
+            <summary class="p-4 cursor-pointer font-semibold text-sm flex justify-between items-center">
+              <span class="flex items-center gap-2"><span class="material-symbols-outlined text-amber-600 text-lg">pending</span> Pods stuck in Pending</span>
+              <span class="material-symbols-outlined group-open:rotate-180 transition-transform text-on-surface-variant">expand_more</span>
+            </summary>
+            <div class="px-4 pb-4 text-sm text-on-surface-variant">
+              Check events (<span class="mono-font text-primary text-xs">kubectl get events -n ml-scheduling</span>), scheduler logs, and quota (<span class="mono-font text-primary text-xs">kubectl describe resourcequota -n ml-scheduling</span>). Reduce parallelism if quota is exceeded.
+            </div>
+          </details>
+        </div>
+        <div class="space-y-4">
+          <details class="group bg-surface-container-lowest rounded-2xl border border-outline-variant/10 shadow-sm">
+            <summary class="p-4 cursor-pointer font-semibold text-sm flex justify-between items-center">
+              <span class="flex items-center gap-2"><span class="material-symbols-outlined text-error text-lg">memory</span> OOMKilled pods</span>
+              <span class="material-symbols-outlined group-open:rotate-180 transition-transform text-on-surface-variant">expand_more</span>
+            </summary>
+            <div class="px-4 pb-4 text-sm text-on-surface-variant">
+              BERT needs ~4 Gi memory limit. Check that the namespace ResourceQuota and LimitRange allow enough memory and that nodes have sufficient capacity.
+            </div>
+          </details>
+          <details class="group bg-surface-container-lowest rounded-2xl border border-outline-variant/10 shadow-sm">
+            <summary class="p-4 cursor-pointer font-semibold text-sm flex justify-between items-center">
+              <span class="flex items-center gap-2"><span class="material-symbols-outlined text-amber-600 text-lg">cloud_off</span> Image pull errors on Minikube</span>
+              <span class="material-symbols-outlined group-open:rotate-180 transition-transform text-on-surface-variant">expand_more</span>
+            </summary>
+            <div class="px-4 pb-4 text-sm text-on-surface-variant">
+              After <span class="mono-font text-primary text-xs">make load</span>, Jobs must use <span class="mono-font text-primary text-xs">imagePullPolicy: Never</span>. Verify with <span class="mono-font text-primary text-xs">minikube image ls | grep ml-workload</span>.
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <!-- References -->
+      <div class="mt-12 pt-8 border-t border-surface-container-high">
+        <h3 class="text-lg font-bold headline-font mb-4 flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">bookmark</span> References
+        </h3>
+        <ul class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <li><a class="text-sm text-primary hover:underline flex items-center gap-2" href="https://kubernetes.io/docs/reference/scheduling/config/" target="_blank">K8s Scheduling Framework Docs <span class="material-symbols-outlined text-xs">open_in_new</span></a></li>
+          <li><a class="text-sm text-primary hover:underline flex items-center gap-2" href="https://volcano.sh/" target="_blank">Volcano Gang Scheduling <span class="material-symbols-outlined text-xs">open_in_new</span></a></li>
+          <li><a class="text-sm text-primary hover:underline flex items-center gap-2" href="https://pytorch.org/" target="_blank">PyTorch Documentation <span class="material-symbols-outlined text-xs">open_in_new</span></a></li>
+          <li><a class="text-sm text-primary hover:underline flex items-center gap-2" href="https://cloud.google.com/kubernetes-engine/docs" target="_blank">Google Kubernetes Engine Docs <span class="material-symbols-outlined text-xs">open_in_new</span></a></li>
+          <li><a class="text-sm text-primary hover:underline flex items-center gap-2" href="https://minikube.sigs.k8s.io/" target="_blank">Minikube Documentation <span class="material-symbols-outlined text-xs">open_in_new</span></a></li>
+        </ul>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Footer -->
+  <footer class="w-full border-t border-slate-200 bg-white flex flex-col md:flex-row justify-between items-center px-12 py-8 mt-auto text-xs text-slate-500">
+    <div class="mb-3 md:mb-0">&copy; 2026 Kshitij Mishra &middot; CSC4311 Cloud Computing &middot; Spring 2026</div>
+    <div class="flex items-center gap-6">
+      <a class="hover:text-primary transition-colors flex items-center gap-1.5" href="https://kubernetes.io/" target="_blank"><img src="kubernetes.svg" alt="" class="h-4 w-auto"/> Kubernetes</a>
+      <a class="hover:text-primary transition-colors flex items-center gap-1.5" href="https://pytorch.org/" target="_blank"><img src="pytorch-icon.svg" alt="" class="h-4 w-auto"/> PyTorch</a>
+      <a class="hover:text-primary transition-colors flex items-center gap-1.5" href="https://cloud.google.com/" target="_blank"><img src="google-cloud.svg" alt="" class="h-3.5 w-auto"/> Google Cloud</a>
+      <a class="hover:text-primary transition-colors flex items-center gap-1.5" href="https://www.docker.com/" target="_blank"><img src="docker-icon.svg" alt="" class="h-3.5 w-auto"/> Docker</a>
+      <a class="hover:text-primary transition-colors flex items-center gap-1.5" href="https://www.python.org/" target="_blank"><img src="python.svg" alt="" class="h-4 w-auto"/> Python</a>
+    </div>
+  </footer>
+
+</main>
+
+<script>
+function switchTab(id) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+  document.getElementById('tab-' + id).classList.remove('hidden');
+  document.querySelector('[onclick="switchTab(\'' + id + '\')"]').classList.add('active');
+}
+
+// Sidebar active state tracking
+const sections = document.querySelectorAll('section[id]');
+const sidebarLinks = document.querySelectorAll('.sidebar-link');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      sidebarLinks.forEach(link => {
+        link.classList.remove('text-blue-600', 'font-semibold', 'border-l-2', 'border-blue-600', 'bg-blue-50/50');
+        link.classList.add('text-slate-500');
+      });
+      const active = document.querySelector('.sidebar-link[href="#' + entry.target.id + '"]');
+      if (active) {
+        active.classList.remove('text-slate-500');
+        active.classList.add('text-blue-600', 'font-semibold', 'border-l-2', 'border-blue-600', 'bg-blue-50/50');
+      }
+    }
+  });
+}, { rootMargin: '-20% 0px -60% 0px' });
+sections.forEach(s => observer.observe(s));
+
+// Mobile menu auto-close on link click
+document.querySelectorAll('#mobile-menu a').forEach(a => {
+  a.addEventListener('click', () => document.getElementById('mobile-menu').classList.add('hidden'));
+});
+</script>
+</body>
+</html>
