@@ -9,3 +9,4 @@ __pycache__/
 # Experiment pipeline outputs (directory kept via runs/.gitkeep)
 runs/*
 !runs/.gitkeep
+!runs/plots/
