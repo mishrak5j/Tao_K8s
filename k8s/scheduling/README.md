@@ -1,21 +1,34 @@
-# Four scheduling methods
+# Scheduling manifests
 
-| Method | What installs it | Job manifest |
-|--------|-------------------|--------------|
-| **Default** | Built-in cluster `kube-scheduler` (nothing extra) | `job-scheduler-default.yaml` |
-| **Bin packing** | `make install-secondary-scheduler` | `job-scheduler-binpack.yaml` |
-| **Spread** | Same as bin packing | `job-scheduler-spread.yaml` |
-| **Gang** | `make install-volcano` | `job-volcano-gang.yaml` |
+## What is in this directory
+
+| Piece | Role |
+|-------|------|
+| **`experiment-template.yaml`** | Template for [`run_experiment.py`](../../run_experiment.py); not applied directly—placeholders are substituted per run. |
+| **`secondary-scheduler-rbac.yaml`**, **`secondary-scheduler-binpack.yaml`**, **`secondary-scheduler-spread.yaml`** | RBAC + Deployments for bin-pack and spread **secondary kube-schedulers** (`make install-secondary-scheduler`). |
+| **`job-scheduler-binpack-yolo-batch.yaml`** | Optional manual YOLO batch Job using the binpack scheduler. |
+| **`job-spread-yolo-batch.yaml`** | Optional manual YOLO batch Job using the spread scheduler. |
+| **`job-dlrm-binpack.yaml`** | Optional manual DLRM batch Job using the binpack scheduler. |
+
+**Schedulers:**
+
+| Strategy | What you need |
+|----------|----------------|
+| **Default** | Cluster `kube-scheduler` only — use `run_experiment.py --strategy default` or a Job without `schedulerName`. |
+| **Bin pack** | `make install-secondary-scheduler`, then Jobs with `schedulerName: binpack-scheduler` (set by the experiment script for `--strategy binpack`). |
+| **Spread** | Same install as bin pack; Jobs use `schedulerName: spread-scheduler` (`--strategy spread`). |
+
+**Volcano:** `make install-volcano` installs controllers; **no sample Volcano Job** lives in this folder. Add your own manifests if you use gang scheduling.
 
 Supporting YAML (not Jobs): `secondary-scheduler-rbac.yaml`, `secondary-scheduler-binpack.yaml`, `secondary-scheduler-spread.yaml`. Re-apply RBAC after edits: `kubectl apply -f k8s/scheduling/secondary-scheduler-rbac.yaml` and restart the two scheduler Deployments.
 
 ## Image and pull policy (GKE vs Minikube)
 
-Job manifests use a **GCP Artifact Registry** placeholder:
+Manual Job YAMLs may use a **GCP Artifact Registry** placeholder:
 
 `us-central1-docker.pkg.dev/YOUR_PROJECT/YOUR_REPO/ml-workload:v1` with **`imagePullPolicy: IfNotPresent`**.
 
-**Recommended on GKE:** from the repo root, set `GCP_PROJECT`, `GCP_REGION`, `AR_REPO` (see `gcp.env.example`), then `make gcp-push` and `make gcp-apply-workloads` — the overlay `k8s/overlays/gke` rewrites all Job images via Kustomize (see root `README.md`, Phase 2).
+**Recommended on GKE:** from the repo root, set `GCP_PROJECT`, `GCP_REGION`, `AR_REPO` (see `gcp.env.example`), then `make gcp-push` and `make gcp-apply-workloads` — the overlay [`k8s/overlays/gke`](../../k8s/overlays/gke) rewrites Job images via Kustomize (see root `README.md`, Phase 2). The overlay currently includes the **YOLO batch Jobs** plus namespace/quota.
 
 Alternatively:
 
@@ -23,15 +36,14 @@ Alternatively:
 2. Replace `YOUR_PROJECT` / `YOUR_REPO` (and `us-central1` if your region differs) in every Job YAML, **or** use `sed`/Kustomize.
 3. Ensure nodes can pull (same GCP project as Artifact Registry is usually enough; private repos may need `imagePullSecrets`).
 
-**Minikube** (image only on the node after `make load`): set `image: ml-workload:v1` and `imagePullPolicy: Never` in these Job files, then apply.
+**Minikube** (image only on the node after `make load`): use `image: ml-workload:v1` and `imagePullPolicy: Never`, or run `run_experiment.py` with defaults.
 
-## Apply order
+## Apply order (recommended)
 
 1. `kubectl apply -f k8s/00-namespace-quota.yaml`
-2. Build and push the image (GKE) **or** `make build` + `make load` (Minikube) and fix image lines as above
-3. **Default:** `kubectl apply -f k8s/scheduling/job-scheduler-default.yaml`
-4. **Bin pack / spread:** `make install-secondary-scheduler`, wait until both scheduler Deployments are Running in `kube-system`, then apply `job-scheduler-binpack.yaml` or `job-scheduler-spread.yaml`. For **Minikube** + **YOLO** batch (4 completions, parallelism 2, local image): `job-scheduler-binpack-yolo.yaml` (bin-pack) or `job-spread-yolo.yaml` (spread) after `make load`.
-5. **Gang:** `make install-volcano`, wait for controllers, then `kubectl apply -f k8s/scheduling/job-volcano-gang.yaml`
+2. Build and push the image (GKE) **or** `make build` + `make load` (Minikube).
+3. **Automated path:** from the repo root, run [`run_experiment.py`](../../run_experiment.py) (see root `README.md`). For `binpack` / `spread`, the script applies the secondary scheduler manifests and waits for them to be ready.
+4. **Manual Jobs:** if not using the script, run `make install-secondary-scheduler` when using binpack/spread, wait until both scheduler Deployments are **Running** in `kube-system`, then `kubectl apply -f` the desired Job YAML (e.g. YOLO or DLRM batch files above).
 
 ## kube-scheduler image
 
