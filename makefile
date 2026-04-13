@@ -23,7 +23,7 @@ STRATEGY ?= binpack
 .PHONY: setup build load run lint lint-fix clean clean-jobs build-gpu run-gpu-resnet run-bench-resnet smoke \
 	install-secondary-scheduler uninstall-secondary-scheduler install-volcano \
 	gcp-kustomize gcp-push gcp-get-credentials gcp-apply-workloads gcp-phase2 \
-	experiment
+	experiment visualize-presentation
 
 # --- GKE Phase 2: push image + kubectl apply (after cluster and AR repo exist) ---
 gcp-kustomize:
@@ -46,7 +46,7 @@ gcp-apply-workloads: gcp-kustomize
 
 # Full Phase 2: build, push to Artifact Registry, kubeconfig for GKE, apply namespace + Jobs
 gcp-phase2: gcp-push gcp-get-credentials gcp-apply-workloads
-	@echo "Next: kubectl get pods -n ml-scheduling; kubectl logs -n ml-scheduling job/ml-sched-default-resnet"
+	@echo "Next: kubectl get pods -n ml-scheduling; see overlay Jobs (e.g. YOLO batch) or run: make experiment"
 
 # 1. Start Minikube with metrics-server (--nodes for multi-node; override: make setup MINIKUBE_NODES=3)
 setup:
@@ -86,9 +86,9 @@ smoke: build
 load:
 	minikube image load $(IMAGE_NAME):$(TAG)
 
-# 5. Apply default-scheduler Job (ResNet benchmark; see k8s/scheduling/)
+# 5. One-shot experiment (default kube-scheduler + ResNet; same as: MODEL=resnet STRATEGY=default make experiment)
 run:
-	kubectl apply -f k8s/scheduling/job-scheduler-default.yaml
+	$(MAKE) experiment MODEL=resnet STRATEGY=default
 
 # Secondary kube-schedulers: bin-pack (MostAllocated) + spread (LeastAllocated), one Deployment each.
 install-secondary-scheduler:
@@ -114,6 +114,10 @@ clean-jobs:
 # Automated benchmark: run_experiment.py (requires kubectl + optional pip install -r requirements-experiments.txt)
 experiment:
 	python3 run_experiment.py --model $(MODEL) --strategy $(STRATEGY)
+
+# Presentation-quality charts from experiment runs (requires matplotlib + numpy)
+visualize-presentation:
+	python3 scripts/visualize_presentation.py
 
 # Tear down the cluster
 clean:
