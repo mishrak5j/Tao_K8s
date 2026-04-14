@@ -1,7 +1,7 @@
 # Tao_K8s — Kubernetes Resource Management for ML Workloads
 
 **Course:** CSC4311 — Cloud Computing (Spring 2026)
-**Author:** Kshitij Mishra
+**Authors:** Kshitij Mishra & Adrit Ganeriwala
 
 ---
 
