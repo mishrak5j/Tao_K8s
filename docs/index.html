@@ -519,7 +519,7 @@ python3 scripts/visualize_presentation.py  # presentation-quality charts</code><
             <p class="text-sm text-on-surface-variant">Raw speed comparison &mdash; mean pod duration for each model across all three strategies with &plusmn;1 std dev error bars.</p>
           </div>
           <div class="p-4 bg-white flex justify-center">
-            <img src="../runs/plots/grouped_bar_mean_latency.png" alt="Grouped Bar Chart: Mean Latency" class="max-w-full h-auto rounded-lg" loading="lazy"/>
+            <img src="plots/grouped_bar_mean_latency.png" alt="Grouped Bar Chart: Mean Latency" class="max-w-full h-auto rounded-lg" loading="lazy"/>
           </div>
           <div class="p-5 bg-surface-container-low text-sm text-on-surface-variant">
             <strong class="text-on-surface">Analysis:</strong> Spread is the undisputed performance champion for BERT (-36.8%) and ResNet (-20.9%). Binpack introduces a measurable latency penalty on compute-heavy Transformers due to L3 cache and memory bus contention.
@@ -532,7 +532,7 @@ python3 scripts/visualize_presentation.py  # presentation-quality charts</code><
             <p class="text-sm text-on-surface-variant">Pod duration distributions within each 10-pod job &mdash; reveals how "unpredictable" each strategy is.</p>
           </div>
           <div class="p-4 bg-white flex justify-center">
-            <img src="../runs/plots/boxplot_duration_jitter.png" alt="Box Plot: Duration Jitter" class="max-w-full h-auto rounded-lg" loading="lazy"/>
+            <img src="plots/boxplot_duration_jitter.png" alt="Box Plot: Duration Jitter" class="max-w-full h-auto rounded-lg" loading="lazy"/>
           </div>
           <div class="p-5 bg-surface-container-low text-sm text-on-surface-variant">
             <strong class="text-on-surface">Analysis:</strong> Look at the massive whiskers on YOLO (Default) and ResNet (Default) &mdash; pods range from 10s to 55s. Spread showcases the tightest boxes, proving that isolating workloads guarantees deterministic completion times. Binpack is tight but slower overall.
@@ -545,7 +545,7 @@ python3 scripts/visualize_presentation.py  # presentation-quality charts</code><
             <p class="text-sm text-on-surface-variant">Percentage change in mean duration vs the Default baseline. Green = faster, red = slower.</p>
           </div>
           <div class="p-4 bg-white flex justify-center">
-            <img src="../runs/plots/heatmap_pct_change.png" alt="Heatmap: % Change vs Default" class="max-w-full h-auto rounded-lg" loading="lazy"/>
+            <img src="plots/heatmap_pct_change.png" alt="Heatmap: % Change vs Default" class="max-w-full h-auto rounded-lg" loading="lazy"/>
           </div>
           <div class="p-5 bg-surface-container-low text-sm text-on-surface-variant">
             <strong class="text-on-surface">Analysis:</strong> The deep green in the Spread column for YOLO (-54.6%) is a massive win. For lightweight, highly parallel inference tasks, the default Kubernetes scheduler is highly inefficient compared to pure isolation. Meanwhile, Binpack imposes a +7.5% penalty on BERT Transformers.
@@ -558,7 +558,7 @@ python3 scripts/visualize_presentation.py  # presentation-quality charts</code><
             <p class="text-sm text-on-surface-variant">Throughput (pods/min) vs infrastructure cost (total pod-seconds). Ideal position: bottom-right.</p>
           </div>
           <div class="p-4 bg-white flex justify-center">
-            <img src="../runs/plots/pareto_scatter.png" alt="Pareto Scatter: Cost vs Throughput" class="max-w-full h-auto rounded-lg" loading="lazy"/>
+            <img src="plots/pareto_scatter.png" alt="Pareto Scatter: Cost vs Throughput" class="max-w-full h-auto rounded-lg" loading="lazy"/>
           </div>
           <div class="p-5 bg-surface-container-low text-sm text-on-surface-variant">
             <strong class="text-on-surface">Analysis:</strong> There is no "perfect" scheduler. Spread dominates throughput but costs significantly more in node provisioning. Binpack acts as the budget constraint &mdash; keeping costs low at the expense of total pod-seconds. Teams must map their workloads on this matrix to determine the correct heuristic for their SLA.
